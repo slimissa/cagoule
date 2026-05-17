@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+venv/
+.venv/
+*.whl
+
+# C build artifacts
+cagoule/c/*.o
+cagoule/c/*.d
+cagoule/c/libcagoule.so
+cagoule/c/test_math
+cagoule/c/test_matrix
+cagoule/c/test_sbox
+cagoule/c/test_cipher
+cagoule/c/test_omega
+cagoule/c/test_math_avx2
+cagoule/c/test_matrix_avx2
+cagoule/c/test_sbox_avx2
+cagoule/c/test_cipher_pipeline4
+cagoule/c/src/*.o
+cagoule/c/src/*.d
+
+# Compiled library in Python package
+cagoule/libcagoule.so
+cagoule/cagoule/libcagoule.so
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.gcda
+*.gcno
+*.gcov
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Benchmark
+.cagoule_bench/
+benchmark_results/
+
+# Valgrind logs
+/tmp/valgrind_*.log
+
+# Build artifacts
+/tmp/check_size
+/tmp/_chk_ossl

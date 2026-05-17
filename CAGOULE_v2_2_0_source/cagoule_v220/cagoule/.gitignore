@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.whl
+
+# Virtual environment
+venv/
+.env
+.venv
+
+# C build artifacts
+*.o
+*.d
+*.gcda
+*.gcno
+*.gcov
+libcagoule.so
+test_math
+test_matrix
+test_sbox
+test_cipher
+test_omega
+test_math_avx2
+test_matrix_avx2
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# pytest
+.pytest_cache/
+.benchmarks/
+.cagoule_bench/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+/tmp/
+*.log
+
+# Accidental brace expansion
+{cagoule,cagoule-avx2}.c
