@@ -71,3 +71,15 @@ Makefile.bak
 
 # ── Valgrind Logs ──────────────────────────────────────────────────────
 /tmp/valgrind_*.log
+
+# Old release folders
+cagoule v1.2/
+CAGOULE_v1.5.0_final/
+CAGOULE v2.0/
+CAGOULE_v2.1.0_source/
+CAGOULE_v2_2_0_source/
+CAGOULE_v2_3_0_clean/
+CAGOULE_v2_4_0_release/
+CAGOULE_v2_5_0_release/
+cagoule-clean/
+*.zip
