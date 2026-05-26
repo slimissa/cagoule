@@ -1,13 +1,15 @@
 /**
  * test_math_avx2.c — Validation de cagoule_math_avx2.h
- *                     CAGOULE v2.5.0
+ *                     CAGOULE v2.5.2
  *
  * Tests :
  *   1. mulmod64x4 : 512 cas aléatoires, bit-à-bit vs mulmod64 scalaire
  *   2. addmod64x4 : 256 cas aléatoires
  *   3. submod64x4 : 256 cas aléatoires
  *   4. Cas limites : a=0, b=0, a=p-1, b=p-1, a=b=p/2
- *   5. Barrett µ : vérification de la formule floor(2^127/p)
+ *   5. Barrett µ
+ *   5b. mulmod_mersenne64x4 parity (512×8 primes×4 lanes)
+ *   5c. Mersenne edge cases (8 primes×5 edges×4 lanes) : vérification de la formule floor(2^127/p)
  *   6. Bench comparatif : AVX2 vs scalaire (cycles estimés)
  *
  * Usage :
@@ -301,6 +303,112 @@ static void test_barrett_mu(void) {
     }
 }
 
+
+/* ── Test 5b : mulmod_mersenne64x4 parity vs scalaire (v2.5.2) ────── */
+static void test_mersenne_parity(void) {
+    printf("  [5b] mulmod_mersenne64x4 parity (512 cases × 8 Mersenne primes)...\n");
+#ifdef __AVX2__
+    if (!_avx2_available()) {
+        printf("      SKIP — AVX2 non disponible au runtime\n");
+        _pass++;
+        return;
+    }
+
+    /* Use the Mersenne pool from cagoule_math.h */
+    extern const uint64_t CAGOULE_MERSENNE_K[8];
+    extern const uint64_t CAGOULE_MERSENNE_P[8];
+
+    for (int pi = 0; pi < 8; pi++) {
+        uint64_t p = CAGOULE_MERSENNE_P[pi];
+        uint64_t k = CAGOULE_MERSENNE_K[pi];
+        __m256i p_vec = _mm256_set1_epi64x((int64_t)p);
+        __m256i k_vec = _mm256_set1_epi64x((int64_t)k);
+
+        int ok = 0;
+        for (int i = 0; i < 512; i++) {
+            uint64_t a[4], b[4];
+            for (int j = 0; j < 4; j++) {
+                a[j] = rng64() % p;
+                b[j] = rng64() % p;
+            }
+            __m256i va = _mm256_set_epi64x(
+                (int64_t)a[3], (int64_t)a[2], (int64_t)a[1], (int64_t)a[0]);
+            __m256i vb = _mm256_set_epi64x(
+                (int64_t)b[3], (int64_t)b[2], (int64_t)b[1], (int64_t)b[0]);
+
+            __m256i res = mulmod_mersenne64x4(va, vb, p_vec, k_vec);
+            uint64_t got[4];
+            m256i_to_u64(res, got);
+
+            for (int j = 0; j < 4; j++) {
+                uint64_t expected = mulmod64(a[j], b[j], p);
+                if (got[j] == expected && got[j] < p) {
+                    _pass++;
+                    ok++;
+                } else {
+                    _fail++;
+                    if (_fail <= 4) {
+                        fprintf(stderr, "  FAIL  mersenne parity prime[%d] k=%llu "
+                                "lane=%d a=%llu b=%llu got=%llu exp=%llu\n",
+                                pi, (unsigned long long)k, j,
+                                (unsigned long long)a[j], (unsigned long long)b[j],
+                                (unsigned long long)got[j], (unsigned long long)expected);
+                    }
+                }
+            }
+        }
+    }
+#else
+    printf("      SKIP — AVX2 non compilé\n");
+    _pass++;
+#endif
+}
+
+/* ── Test 5c : Mersenne edge cases (v2.5.2) ──────────────────────── */
+static void test_mersenne_edge_cases(void) {
+    printf("  [5c] Mersenne edge cases (a=0, b=0, a=p-1, b=p-1)...\n");
+#ifdef __AVX2__
+    if (!_avx2_available()) {
+        printf("      SKIP — AVX2 non disponible au runtime\n");
+        _pass++;
+        return;
+    }
+
+    extern const uint64_t CAGOULE_MERSENNE_K[8];
+    extern const uint64_t CAGOULE_MERSENNE_P[8];
+
+    for (int pi = 0; pi < 8; pi++) {
+        uint64_t p = CAGOULE_MERSENNE_P[pi];
+        uint64_t k = CAGOULE_MERSENNE_K[pi];
+        __m256i p_vec = _mm256_set1_epi64x((int64_t)p);
+        __m256i k_vec = _mm256_set1_epi64x((int64_t)k);
+
+        /* Test critical edge values for each prime */
+        uint64_t edges[] = {0, 1, p-1, p/2, p-2};
+        for (int ei = 0; ei < 5; ei++) {
+            uint64_t a = edges[ei];
+            uint64_t b = edges[(ei + 1) % 5];
+            __m256i va = _mm256_set1_epi64x((int64_t)a);
+            __m256i vb = _mm256_set1_epi64x((int64_t)b);
+            __m256i res = mulmod_mersenne64x4(va, vb, p_vec, k_vec);
+            uint64_t got[4];
+            m256i_to_u64(res, got);
+            uint64_t exp = mulmod64(a, b, p);
+            for (int j = 0; j < 4; j++) {
+                ASSERT(got[j] == exp && got[j] < p,
+                       "mersenne edge prime[%d] k=%llu a=%llu b=%llu got=%llu exp=%llu",
+                       pi, (unsigned long long)k,
+                       (unsigned long long)a, (unsigned long long)b,
+                       (unsigned long long)got[j], (unsigned long long)exp);
+            }
+        }
+    }
+#else
+    printf("      SKIP — AVX2 non compilé\n");
+    _pass++;
+#endif
+}
+
 /* ── Test 6 : bench comparatif ───────────────────────────────────── */
 static void bench_comparison(void) {
     printf("  [6] Bench mulmod scalaire vs AVX2 (1M iterations chacun)...\n");
@@ -355,7 +463,7 @@ static void bench_comparison(void) {
 /* ── main ─────────────────────────────────────────────────────────── */
 int main(void) {
     printf("══════════════════════════════════════════════════\n");
-    printf("  test_math_avx2 — CAGOULE v2.5.0\n");
+    printf("  test_math_avx2 — CAGOULE v2.5.2\n");
     printf("══════════════════════════════════════════════════\n");
 
 #ifdef __AVX2__
@@ -373,6 +481,8 @@ int main(void) {
     test_submod_parity();
     test_edge_cases();
     test_barrett_mu();
+    test_mersenne_parity();
+    test_mersenne_edge_cases();
     bench_comparison();
 
     printf("══════════════════════════════════════════════════\n");

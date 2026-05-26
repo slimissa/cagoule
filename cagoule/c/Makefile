@@ -151,8 +151,8 @@ test_cipher: tests/test_cipher.c $(LIB) include/cagoule_cipher.h
 test_omega: tests/test_omega.c $(LIB) include/cagoule_omega.h include/cagoule_math.h
 	$(CC) $(CFLAGS) $< -L. -lcagoule -Wl,-rpath,. -o $@ $(LDLIBS) -lpthread
 
-test_math_avx2: tests/test_math_avx2.c include/cagoule_math.h include/cagoule_math_avx2.h
-	$(CC) $(CFLAGS) $(CFLAGS_AVX2) $< -o $@ $(LDLIBS)
+test_math_avx2: tests/test_math_avx2.c $(LIB) include/cagoule_math.h include/cagoule_math_avx2.h
+	$(CC) $(CFLAGS) $(CFLAGS_AVX2) $< -L. -lcagoule -Wl,-rpath,. -o $@ $(LDLIBS)
 
 test_matrix_avx2: tests/test_matrix_avx2.c $(LIB) include/cagoule_math.h include/cagoule_matrix.h include/cagoule_math_avx2.h
 	$(CC) $(CFLAGS) $(CFLAGS_AVX2) $< -L. -lcagoule -Wl,-rpath,. -o $@ $(LDLIBS)

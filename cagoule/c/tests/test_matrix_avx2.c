@@ -1,11 +1,13 @@
 /**
  * test_matrix_avx2.c — Tests cagoule_matrix_mul_avx2 / mul_inv_avx2
- *                       CAGOULE v2.5.0
+ *                       CAGOULE v2.5.2
  *
  * Tests :
  *   1. Roundtrip P×P⁻¹=I (vecteurs standards) — chemin AVX2
  *   2. Parité AVX2 vs scalaire : 100 messages aléatoires
- *   3. Symétrie chiffrement/déchiffrement (même résultat)
+ *   3. Symétrie
+ *   3b. Mersenne pool parity (8 primes × 100 vectors × 32)
+ *   3c. Mersenne pool roundtrip P×P⁻¹=I (8 primes × 256) chiffrement/déchiffrement (même résultat)
  *   4. Bench comparatif AVX2 vs scalaire (65 536 blocs ≡ 1 MB)
  */
 
@@ -159,6 +161,101 @@ static void test_symmetry(void) {
     cagoule_matrix_free(m);
 }
 
+
+/* ── Test 3b : Mersenne pool parity — AVX2 vs scalaire (v2.5.2) ─── */
+static void test_mersenne_parity(void) {
+    printf("  [3b] Mersenne pool parity (8 primes × 100 vectors)...\n");
+
+    extern const uint64_t CAGOULE_MERSENNE_P[8];
+
+    for (int pi = 0; pi < 8; pi++) {
+        uint64_t p = CAGOULE_MERSENNE_P[pi];
+        uint64_t nodes[CAGOULE_N];
+        make_nodes(nodes, p);
+        CagouleMatrix* m = cagoule_matrix_build(nodes, CAGOULE_N, p);
+        if (!m) {
+            fprintf(stderr, "  FAIL  build failed for Mersenne prime[%d] p=%llu\n",
+                    pi, (unsigned long long)p);
+            _fail++;
+            continue;
+        }
+
+        /* Verify k_mersenne is set */
+        ASSERT(m->k_mersenne > 0,
+               "k_mersenne set for Mersenne prime[%d]", pi);
+
+        /* Parity: 100 random vectors, forward + inverse */
+        for (int t = 0; t < 100; t++) {
+            uint64_t v[CAGOULE_N];
+            for (int j = 0; j < CAGOULE_N; j++)
+                v[j] = rng64() % p;
+
+            uint64_t out_scalar[CAGOULE_N], out_avx2[CAGOULE_N];
+            cagoule_matrix_mul_scalar(m, v, out_scalar);
+            cagoule_matrix_mul(m, v, out_avx2);
+
+            for (int j = 0; j < CAGOULE_N; j++) {
+                ASSERT(out_scalar[j] == out_avx2[j],
+                       "Mersenne fwd prime[%d] j=%d t=%d scalar=%llu avx2=%llu",
+                       pi, j, t,
+                       (unsigned long long)out_scalar[j],
+                       (unsigned long long)out_avx2[j]);
+            }
+
+            uint64_t inv_scalar[CAGOULE_N], inv_avx2[CAGOULE_N];
+            cagoule_matrix_mul_inv_scalar(m, v, inv_scalar);
+            cagoule_matrix_mul_inv(m, v, inv_avx2);
+
+            for (int j = 0; j < CAGOULE_N; j++) {
+                ASSERT(inv_scalar[j] == inv_avx2[j],
+                       "Mersenne inv prime[%d] j=%d t=%d scalar=%llu avx2=%llu",
+                       pi, j, t,
+                       (unsigned long long)inv_scalar[j],
+                       (unsigned long long)inv_avx2[j]);
+            }
+        }
+        cagoule_matrix_free(m);
+    }
+}
+
+/* ── Test 3c : Mersenne pool roundtrip P×P⁻¹=I (v2.5.2) ─────────── */
+static void test_mersenne_roundtrip(void) {
+    printf("  [3c] Mersenne pool roundtrip P×P⁻¹=I (8 primes)...\n");
+
+    extern const uint64_t CAGOULE_MERSENNE_P[8];
+
+    for (int pi = 0; pi < 8; pi++) {
+        uint64_t p = CAGOULE_MERSENNE_P[pi];
+        uint64_t nodes[CAGOULE_N];
+        make_nodes(nodes, p);
+        CagouleMatrix* m = cagoule_matrix_build(nodes, CAGOULE_N, p);
+        if (!m) {
+            _fail++;
+            continue;
+        }
+
+        /* Verify P×P⁻¹=I for all basis vectors */
+        for (int i = 0; i < CAGOULE_N; i++) {
+            uint64_t v[CAGOULE_N] = {0};
+            v[i] = 1;
+            uint64_t fwd[CAGOULE_N], back[CAGOULE_N];
+            cagoule_matrix_mul(m, v, fwd);
+            cagoule_matrix_mul_inv(m, fwd, back);
+            ASSERT(back[i] == 1,
+                   "Mersenne R/T prime[%d] back[%d]=%llu (attendu 1)",
+                   pi, i, (unsigned long long)back[i]);
+            for (int j = 0; j < CAGOULE_N; j++) {
+                if (j != i) {
+                    ASSERT(back[j] == 0,
+                           "Mersenne R/T prime[%d] back[%d]=%llu (attendu 0) i=%d",
+                           pi, j, (unsigned long long)back[j], i);
+                }
+            }
+        }
+        cagoule_matrix_free(m);
+    }
+}
+
 /* ── Test 4 : bench comparatif 65 536 blocs ─────────────────────── */
 static void bench_65k_blocks(void) {
     printf("  [4] Bench 65 536 blocs (≡ 1 MB) — AVX2 vs scalaire...\n");
@@ -215,7 +312,7 @@ static void bench_65k_blocks(void) {
 /* ── main ────────────────────────────────────────────────────────── */
 int main(void) {
     printf("══════════════════════════════════════════════════\n");
-    printf("  test_matrix_avx2 — CAGOULE v2.5.0\n");
+    printf("  test_matrix_avx2 — CAGOULE v2.5.2\n");
     printf("══════════════════════════════════════════════════\n");
     printf("  Backend AVX2 actif : %s\n",
            cagoule_matrix_backend_is_avx2() ? "✓ OUI" : "✗ NON (fallback scalaire)");
@@ -223,6 +320,8 @@ int main(void) {
     test_roundtrip_avx2();
     test_parity_avx2_vs_scalar();
     test_symmetry();
+    test_mersenne_parity();
+    test_mersenne_roundtrip();
     bench_65k_blocks();
 
     printf("══════════════════════════════════════════════════\n");

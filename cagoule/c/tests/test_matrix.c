@@ -112,6 +112,46 @@ static void test_avx2_scalar_parity(void) {
     cagoule_matrix_free(m);
 }
 
+
+/* ── Test Mersenne pool roundtrip (v2.5.2) ─────────────────────────── */
+static void test_mersenne_roundtrip(void) {
+    printf("\n[Mersenne pool roundtrip — 8 primes]\n");
+    extern const uint64_t CAGOULE_MERSENNE_P[8];
+    
+    for (int pi = 0; pi < 8; pi++) {
+        uint64_t p = CAGOULE_MERSENNE_P[pi];
+        uint64_t nodes[CAGOULE_N];
+        gen_nodes(nodes, p, CAGOULE_N);
+        
+        CagouleMatrix* m = cagoule_matrix_build(nodes, CAGOULE_N, p);
+        char msg[80];
+        snprintf(msg, sizeof(msg), "build Mersenne prime[%d] OK", pi);
+        CHECK(m != NULL, msg);
+        if (!m) continue;
+        
+        snprintf(msg, sizeof(msg), "k_mersenne set prime[%d]", pi);
+        CHECK(m->k_mersenne > 0, msg);
+        
+        snprintf(msg, sizeof(msg), "verify Mersenne prime[%d]", pi);
+        CHECK(cagoule_matrix_verify(m) == 1, msg);
+        
+        uint64_t v[CAGOULE_N], fwd[CAGOULE_N], back[CAGOULE_N];
+        for (int i = 0; i < CAGOULE_N; i++)
+            v[i] = (uint64_t)((i * 123456789ULL + 987654321ULL) % p);
+        
+        cagoule_matrix_mul(m, v, fwd);
+        cagoule_matrix_mul_inv(m, fwd, back);
+        
+        int eq = 1;
+        for (int i = 0; i < CAGOULE_N; i++)
+            if (back[i] != v[i]) { eq = 0; break; }
+        snprintf(msg, sizeof(msg), "roundtrip Mersenne prime[%d]", pi);
+        CHECK(eq, msg);
+        
+        cagoule_matrix_free(m);
+    }
+}
+
 /* ── Benchmark avec entrée variable (évite optimisation compilateur) ─ */
 static void bench_matmul(void) {
     printf("\n[bench cagoule_matrix_mul — 65 536 blocs (≡ 1 MB)]\n");
@@ -174,12 +214,15 @@ static void test_invalid_params(void) {
     
     m = cagoule_matrix_build(nodes, CAGOULE_N, 1);
     CHECK(m == NULL, "p=1 → NULL");
+
+    m = cagoule_matrix_build(nodes, 8, P_BENCH);
+    CHECK(m == NULL, "n=8 (≠ CAGOULE_N) → NULL");
 }
 
 /* ── Main ─────────────────────────────────────────────────────────── */
 int main(void) {
     printf("══════════════════════════════════════════\n");
-    printf("  CAGOULE v2.5.0 — test_matrix.c\n");
+    printf("  CAGOULE v2.5.2 — test_matrix.c\n");
     printf("══════════════════════════════════════════\n");
 
     printf("\n[Roundtrip P × P^-1 = I]\n");
@@ -188,7 +231,8 @@ int main(void) {
     test_roundtrip(97,      "p=97");
 
     test_cauchy_fallback();
-    test_avx2_scalar_parity(); 
+    test_avx2_scalar_parity();
+    test_mersenne_roundtrip();
     test_invalid_params();
     bench_matmul();
 

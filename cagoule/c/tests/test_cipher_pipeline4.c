@@ -7,7 +7,8 @@
  *   3. Edge cases : n_blocks = 1..9, 15, 16, 17, 32, 33
  *   4. Guards null-pointer et out_size
  *   5. Parité 10 000 messages aléatoires (tailles 8..64 blocs)
- *   6. Benchmark throughput encrypt/decrypt
+ *   6. Benchmark
+ *   6b. Z-Domain Shifting + Pipeline4 (v2.5.2) throughput encrypt/decrypt
  *   7. Regression: decrypt residual n_blocks % 4 != 0 (v2.4.0 BUG 1 fix)
  *
  * Total assertions : ~95
@@ -207,6 +208,89 @@ static void test_benchmark(void) {
     free(plain); free(ct); free(pt);
 }
 
+
+/* ── Test 4b : Z-Domain Shifting + Pipeline4 (v2.5.2) ───────────────── */
+static void test_z_domain_pipeline4(void) {
+    printf("\n[4b] Z-Domain Shifting + Pipeline4 parity...\n");
+
+    uint64_t zo[16];
+    for (int i = 0; i < 16; i++)
+        zo[i] = (uint64_t)((i * 0x9E3779B97F4A7C15ULL) % P);
+
+    /* Test with pipeline4 threshold (8 blocks) + residual (9, 16, 17 blocks) */
+    int counts[] = {8, 9, 16, 17};
+    for (int ci = 0; ci < 4; ci++) {
+        size_t nb = (size_t)counts[ci];
+        size_t plain_sz = nb * CAGOULE_N;
+        size_t ct_sz = nb * CAGOULE_N * pb();
+
+        uint8_t* plain = malloc(plain_sz);
+        uint8_t* ct_zo = malloc(ct_sz);
+        uint8_t* ct_no = malloc(ct_sz);
+        uint8_t* pt    = malloc(plain_sz);
+
+        fill_plain(plain, plain_sz, ci + 200);
+
+        /* Encrypt WITH Z-shifting */
+        int r = cagoule_cbc_encrypt(plain, nb, ct_zo, ct_sz,
+                                     g_mat, &g_sbox, g_rk, NUM_KEYS, P, zo, 16);
+        char msg[80];
+        snprintf(msg, sizeof(msg), "Z-shift encrypt pipeline4 n=%zu", nb);
+        CHECK(r == CAGOULE_OK, msg);
+
+        /* Encrypt WITHOUT Z-shifting */
+        r = cagoule_cbc_encrypt(plain, nb, ct_no, ct_sz,
+                                 g_mat, &g_sbox, g_rk, NUM_KEYS, P, NULL, 0);
+        snprintf(msg, sizeof(msg), "non-Z encrypt pipeline4 n=%zu", nb);
+        CHECK(r == CAGOULE_OK, msg);
+
+        /* Ciphertexts MUST differ */
+        int differ = memcmp(ct_zo, ct_no, ct_sz) != 0;
+        snprintf(msg, sizeof(msg), "Z-shift differs pipeline4 n=%zu", nb);
+        CHECK(differ, msg);
+
+        /* Roundtrip WITH Z-shifting */
+        r = cagoule_cbc_decrypt(ct_zo, nb, pt, plain_sz,
+                                 g_mat, &g_sbox, g_rk, NUM_KEYS, P, zo, 16);
+        snprintf(msg, sizeof(msg), "Z-shift decrypt pipeline4 n=%zu", nb);
+        CHECK(r == CAGOULE_OK, msg);
+
+        snprintf(msg, sizeof(msg), "Z-shift roundtrip pipeline4 n=%zu", nb);
+        CHECK(memcmp(plain, pt, plain_sz) == 0, msg);
+
+        free(plain); free(ct_zo); free(ct_no); free(pt);
+    }
+
+    /* Test with 10K random messages (reduced from full suite) */
+    srand(0xCAFEBABE);
+    int n_ok = 0;
+    for (int iter = 0; iter < 1000; iter++) {
+        size_t nb = 8 + (size_t)(rand() % 57);
+        size_t plain_sz = nb * CAGOULE_N;
+        size_t ct_sz = nb * CAGOULE_N * pb();
+
+        uint8_t* plain = malloc(plain_sz);
+        uint8_t* ct = malloc(ct_sz);
+        uint8_t* pt = malloc(plain_sz);
+
+        for (size_t i = 0; i < plain_sz; i++)
+            plain[i] = (uint8_t)(rand() & 0xFF);
+
+        int r1 = cagoule_cbc_encrypt(plain, nb, ct, ct_sz,
+                                      g_mat, &g_sbox, g_rk, NUM_KEYS, P, zo, 16);
+        int r2 = cagoule_cbc_decrypt(ct, nb, pt, plain_sz,
+                                      g_mat, &g_sbox, g_rk, NUM_KEYS, P, zo, 16);
+
+        if (r1 == CAGOULE_OK && r2 == CAGOULE_OK &&
+            memcmp(plain, pt, plain_sz) == 0)
+            n_ok++;
+
+        free(plain); free(ct); free(pt);
+    }
+    CHECK(n_ok == 1000, "Z-shift pipeline4 1000 random roundtrips");
+    printf("  → %d/1000 OK\n", n_ok);
+}
+
 /* ── Test 5 : Regression — decrypt residual n_blocks % 4 != 0 ────────── */
 static void test_decrypt_residual_regression(void) {
     printf("\n[5] Regression: decrypt residual n_blocks %% 4 != 0...\n");
@@ -251,7 +335,7 @@ static void test_decrypt_residual_regression(void) {
 /* ── main ─────────────────────────────────────────────────────────── */
 int main(void) {
     printf("═══════════════════════════════════════════════════════\n");
-    printf("  test_cipher_pipeline4 — CAGOULE v2.5.0\n");
+    printf("  test_cipher_pipeline4 — CAGOULE v2.5.2\n");
     printf("═══════════════════════════════════════════════════════\n");
 
     setup();
@@ -261,6 +345,7 @@ int main(void) {
     test_decrypt_residual_regression(); /* Test 3: BUG 1 regression */
     test_parity_random();           /* Test 4: 10 000 random */
     test_benchmark();               /* Test 5: performance */
+    test_z_domain_pipeline4();      /* Test 5b: Z-Domain + pipeline4 */
 
     cagoule_matrix_free(g_mat);
 

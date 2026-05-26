@@ -117,6 +117,48 @@ static void test_block(void) {
     CHECK(changed, "forward(block) != block (S-box non triviale)");
 }
 
+
+/* ── Test zero round keys (v2.5.2) ────────────────────────────────── */
+static void test_zero_round_keys(void) {
+    printf("\n[Zero round keys — defensive upgrade to 1]\n");
+    CagouleSBox64 s;
+    cagoule_sbox_init(&s, P_BENCH, 0, 0);
+    CHECK(s.use_feistel == 1, "Feistel active even with rk=0");
+    CHECK(s.rk0 == 1, "rk0 upgraded from 0 to 1");
+    CHECK(s.rk1 == 1, "rk1 upgraded from 0 to 1");
+    int ok = 1;
+    for (uint64_t x = 0; x < 1000; x++) {
+        uint64_t y = cagoule_sbox_forward(&s, x % P_BENCH);
+        if (y >= P_BENCH) { ok = 0; break; }
+        uint64_t x2 = cagoule_sbox_inverse(&s, y);
+        if (x2 != x % P_BENCH) { ok = 0; break; }
+    }
+    CHECK(ok, "zero-rk S-box: roundtrip works after upgrade");
+}
+
+/* ── Test Mersenne prime S-box (v2.5.2) ───────────────────────────── */
+static void test_mersenne_sbox(void) {
+    printf("\n[Mersenne prime S-box]\n");
+    extern const uint64_t CAGOULE_MERSENNE_P[8];
+    for (int pi = 0; pi < 8; pi++) {
+        uint64_t p = CAGOULE_MERSENNE_P[pi];
+        CagouleSBox64 s;
+        cagoule_sbox_init(&s, p, RK0, RK1);
+        CHECK(s.use_feistel == 1, "Feistel active for Mersenne prime");
+        int ok = 1;
+        for (int i = 0; i < 1000; i++) {
+            uint64_t x = (uint64_t)((i * 1234567891011ULL + 42) % p);
+            uint64_t y = cagoule_sbox_forward(&s, x);
+            if (y >= p) { ok = 0; break; }
+            uint64_t x2 = cagoule_sbox_inverse(&s, y);
+            if (x2 != x) { ok = 0; break; }
+        }
+        char msg[80];
+        snprintf(msg, sizeof(msg), "Mersenne S-box roundtrip prime[%d]", pi);
+        CHECK(ok, msg);
+    }
+}
+
 /* ── Fallback x^d pour petits p ───────────────────────────────────── */
 static void test_small_prime_fallback(void) {
     printf("\n[Fallback x^d pour petits premiers]\n");
@@ -137,7 +179,7 @@ static void test_small_prime_fallback(void) {
 /* ── Main ─────────────────────────────────────────────────────────── */
 int main(void) {
     printf("══════════════════════════════════════════\n");
-    printf("  CAGOULE v2.5.0 — test_sbox.c\n");
+    printf("  CAGOULE v2.5.2 — test_sbox.c\n");
     printf("══════════════════════════════════════════\n");
 
     test_small_prime_fallback();
@@ -147,6 +189,8 @@ int main(void) {
     test_roundtrip(65537,   RK0, RK1, 65537,  "p=65537 exhaustif");
 
     test_block();
+    test_zero_round_keys();
+    test_mersenne_sbox();
     test_feistel_symmetry();
 
     printf("\n──────────────────────────────────────────\n");
