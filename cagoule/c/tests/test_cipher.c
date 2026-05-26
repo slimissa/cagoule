@@ -1,5 +1,5 @@
 /**
- * test_cipher.c — Tests du pipeline CBC CAGOULE v2.5.0
+ * test_cipher.c — Tests du pipeline CBC CAGOULE v2.5.1
  *
  * Usage :
  *   gcc -O2 -std=c99 -Iinclude src/cagoule_matrix.c src/cagoule_sbox.c \
@@ -10,7 +10,8 @@
  *   - Diffusion CBC (blocs identiques → chiffrés différents)
  *   - Valeurs limites (zéros, 0xFF)
  *   - PKCS7 padding
- *   - AVX2 parité (mono-bloc + pipeline4)
+ *   - AVX2 parité
+ *   - Z-Domain Shifting (v2.5.1) (mono-bloc + pipeline4)
  *   - Guards null/size
  *   - Benchmark 1 MB (clock_gettime)
  */
@@ -260,6 +261,76 @@ static void test_guards(void) {
           == CAGOULE_ERR_NULL, "decrypt NULL out");
 }
 
+
+/* ── Test 6b : Z-Domain Shifting (v2.5.0) ─────────────────────────── */
+static void test_z_domain_shifting(void) {
+    printf("\n[Z-Domain Shifting — v2.5.0]\n");
+
+    uint64_t zo[16];
+    for (int i = 0; i < 16; i++)
+        zo[i] = (uint64_t)((i * 0x9E3779B97F4A7C15ULL) % P);
+
+    uint8_t plaintext[32];
+    for (int i = 0; i < 32; i++)
+        plaintext[i] = (uint8_t)(i * 37 + 11);
+
+    size_t n_blocks = 2;
+    size_t ct_size = n_blocks * CAGOULE_N * p_bytes(P);
+
+    uint8_t* ct_with_zo    = malloc(ct_size);
+    uint8_t* ct_without_zo = malloc(ct_size);
+    uint8_t* ct_zero_zo    = malloc(ct_size);
+    uint8_t recovered[32];
+
+    /* Encrypt with Z-shifting */
+    int r = cagoule_cbc_encrypt(plaintext, n_blocks, ct_with_zo, ct_size,
+                                 g_mat, &g_sbox, g_round_keys, NUM_KEYS, P, zo, 16);
+    CHECK(r == CAGOULE_OK, "encrypt with z_offset OK");
+
+    /* Encrypt without Z-shifting */
+    r = cagoule_cbc_encrypt(plaintext, n_blocks, ct_without_zo, ct_size,
+                             g_mat, &g_sbox, g_round_keys, NUM_KEYS, P, NULL, 0);
+    CHECK(r == CAGOULE_OK, "encrypt without z_offset OK");
+
+    /* Ciphertexts MUST differ (Z-shifting changes output) */
+    int differ = memcmp(ct_with_zo, ct_without_zo, ct_size) != 0;
+    CHECK(differ, "Z-shifted ciphertext differs from non-shifted");
+
+    /* Roundtrip with Z-shifting */
+    r = cagoule_cbc_decrypt(ct_with_zo, n_blocks, recovered, sizeof(recovered),
+                             g_mat, &g_sbox, g_round_keys, NUM_KEYS, P, zo, 16);
+    CHECK(r == CAGOULE_OK, "decrypt with z_offset OK");
+    CHECK(memcmp(plaintext, recovered, 32) == 0, "Z-shift roundtrip correct");
+
+    /* Edge: all-zero z_offset should produce same as no z_offset */
+    uint64_t zo_zero[16] = {0};
+    r = cagoule_cbc_encrypt(plaintext, n_blocks, ct_zero_zo, ct_size,
+                             g_mat, &g_sbox, g_round_keys, NUM_KEYS, P, zo_zero, 16);
+    CHECK(r == CAGOULE_OK, "encrypt with zero z_offset OK");
+    int same = memcmp(ct_zero_zo, ct_without_zo, ct_size) == 0;
+    CHECK(same, "zero z_offset ≡ no z_offset");
+
+    /* Edge: single block */
+    uint8_t single_pt[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+    size_t single_ct_size = 1 * CAGOULE_N * p_bytes(P);
+    uint8_t* single_ct = malloc(single_ct_size);
+    uint8_t single_rec[16];
+
+    r = cagoule_cbc_encrypt(single_pt, 1, single_ct, single_ct_size,
+                             g_mat, &g_sbox, g_round_keys, NUM_KEYS, P, zo, 16);
+    CHECK(r == CAGOULE_OK, "single block encrypt with z_offset OK");
+
+    r = cagoule_cbc_decrypt(single_ct, 1, single_rec, sizeof(single_rec),
+                             g_mat, &g_sbox, g_round_keys, NUM_KEYS, P, zo, 16);
+    CHECK(r == CAGOULE_OK, "single block decrypt with z_offset OK");
+    CHECK(memcmp(single_pt, single_rec, 16) == 0, "single block Z-shift roundtrip");
+
+    free(ct_with_zo);
+    free(ct_without_zo);
+    free(ct_zero_zo);
+    free(single_ct);
+}
+
 /* ── Test 7 : AVX2 parité (mono-bloc + pipeline4) ─────────────────── */
 #if defined(__AVX2__)
 static void test_avx2_parity(void) {
@@ -390,7 +461,7 @@ static void bench_1mb(void) {
 /* ── Main ─────────────────────────────────────────────────────────── */
 int main(void) {
     printf("══════════════════════════════════════════\n");
-    printf("  CAGOULE v2.5.0 — test_cipher.c\n");
+    printf("  CAGOULE v2.5.1 — test_cipher.c\n");
     printf("══════════════════════════════════════════\n");
 
     setup();
@@ -403,6 +474,7 @@ int main(void) {
     test_cbc_diffusion();          /* Test 4: diffusion */
     test_edge_cases();             /* Test 5: zeros, 0xFF */
     test_guards();                 /* Test 6: null/size */
+    test_z_domain_shifting();     /* Test 6b: Z-Domain Shifting */
 #if defined(__AVX2__)
     test_avx2_parity();            /* Test 7: AVX2 mono + pipeline4 + residual */
 #endif

@@ -1,8 +1,8 @@
-# CAGOULE v2.5.0
+# CAGOULE v2.5.1
 
 **Cryptographie Algébrique Géométrique par Ondes et Logique Entrelacée**
 
-[![Version](https://img.shields.io/badge/version-2.5.0-blue)](https://github.com/slimissa/CAGOULE)
+[![Version](https://img.shields.io/badge/version-2.5.1-blue)](https://github.com/slimissa/CAGOULE)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12+-blue)](https://www.python.org)
 [![Platform](https://img.shields.io/badge/platform-x86__64%20Linux-lightgrey)](https://github.com/slimissa/CAGOULE)

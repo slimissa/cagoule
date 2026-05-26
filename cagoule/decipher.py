@@ -1,5 +1,5 @@
 """
-decipher.py — Déchiffrement CAGOULE v2.5.0
+decipher.py — Déchiffrement CAGOULE v2.5.1
 
 Corrections v2.1.0 :
   ┌──────────────────────────────────────────────────────────────────┐
@@ -131,7 +131,7 @@ class CagouleFormatError(CagouleError):
 # ══════════════════════════════════════════════════════════════════════════
 
 def _backend_str() -> str:
-    return "C (libcagoule.so v2.5.0)" if CAGOULE_C_AVAILABLE else "Python pur (fallback)"
+    return "C (libcagoule.so v2.5.1)" if CAGOULE_C_AVAILABLE else "Python pur (fallback)"
 
 
 def _auth_error(ct_size: int, reason: str = "", hint: str = "") -> CagouleAuthError:
@@ -182,7 +182,7 @@ def decrypt(ciphertext: bytes, password: bytes | str,
             fast_mode: bool = False,
             params: CagouleParams | None = None) -> bytes:
     """
-    Déchiffre un message CAGOULE v2.5.0 au format CGL1.
+    Déchiffre un message CAGOULE v2.5.1 au format CGL1.
 
     Règle de dérivation des paramètres (v2.1.0) :
     ┌──────────────────────┬───────────────────────────────────────────┐

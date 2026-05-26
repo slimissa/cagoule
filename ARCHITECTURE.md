@@ -1,10 +1,10 @@
-# CAGOULE v2.5.0 — Architecture
+# CAGOULE v2.5.1 — Architecture
 
 ## Data-Flow Diagram
 
 ```
                           ┌─────────────────────────────────────────────────────────┐
-                          │                   CAGOULE v2.5.0                         │
+                          │                   CAGOULE v2.5.1                         │
                           │    Cryptographie Algébrique Géométrique par Ondes        │
                           │                 et Logique Entrelacée                    │
                           └─────────────────────────────────────────────────────────┘
@@ -39,7 +39,7 @@
   │     ▼                                                                │
   │  ┌─────────────────────┐                                             │
   │  │  Z-Domain Shifting   │  byte[i] = (byte[i] + z_offset[i%16]) % 256│
-  │  │  (v2.5.0, C-layer)  │                                             │
+  │  │  (v2.5.1, C-layer)  │                                             │
   │  └─────────┬───────────┘                                             │
   │            │                                                         │
   │            ▼                                                         │
@@ -59,7 +59,7 @@
   │  │              │   (mod p)    │                              │        │
   │  │              └──────────────┘                              │        │
   │  │                                                          │        │
-  │  │  Optimizations (v2.5.0):                                 │        │
+  │  │  Optimizations (v2.5.1):                                 │        │
   │  │  • Mersenne-64 primes (p = 2^64 - k)                     │        │
   │  │  • mulmod_mersenne64x4 (13 instr vs Barrett 22)          │        │
   │  │  • Option A — Dual Accumulator (even/odd split)          │        │
@@ -124,7 +124,7 @@
 
 ## Key Design Decisions
 
-### 1. Mersenne-64 Prime Pool (v2.5.0)
+### 1. Mersenne-64 Prime Pool (v2.5.1)
 
 | Prime | k | p = 2^64 - k |
 |-------|---|--------------|
@@ -145,7 +145,7 @@
 
 ```
 v2.4.0:  acc += M[j] * v[j]   for j = 0..15   → depth 16 chain
-v2.5.0:  acc_a += M[j] * v[j]  for j even     → depth 8 chain
+v2.5.1:  acc_a += M[j] * v[j]  for j even     → depth 8 chain
          acc_b += M[j] * v[j]  for j odd      → depth 8 chain
          acc = acc_a + acc_b                   → merge at end
 ```
@@ -244,7 +244,7 @@ OVERHEAD = 65 bytes (49 header + 16 tag)
 | C tests (10 binaries) | 4,043,718 | Unit + parity + AVX2 validation |
 | Python tests (pytest) | 579 tests | Integration + KAT + NIST |
 | Valgrind | 7 binaries | Memory leak detection |
-| `test_mersenne` | 4,000,032 | Mersenne-64 pool (v2.5.0 headline) |
+| `test_mersenne` | 4,000,032 | Mersenne-64 pool (v2.5.1 headline) |
 | `test_kat` | 20 tests | Non-regression via SHA-256 pinning |
 
 ---
@@ -270,7 +270,7 @@ make sysinfo      → Compiler/flags/features summary
 
 | Version | Date | Key Features |
 |---------|------|-------------|
-| v2.5.0 | 2026-05-25 | Mersenne-64 pool, Option A dual accumulator, Z-Domain Shifting (C-layer) |
+| v2.5.1 | 2026-05-25 | Mersenne-64 pool, Option A dual accumulator, Z-Domain Shifting (C-layer) |
 | v2.4.0 | 2026-05-16 | Pipeline4, encrypt_bulk API, GIL release, thread-local buffer pool |
 | v2.3.0 | 2026-05-08 | S-box AVX2, Mersenne-like reduction, cycle-walking AVX2 |
 | v2.2.0 | 2026-05-06 | AVX2 Vandermonde matrix multiply |

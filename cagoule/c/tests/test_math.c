@@ -79,6 +79,59 @@ static void test_invmod64(void) {
     CHECK(mulmod64(a, inv_a, P) == 1, "invmod64 sur grand P");
 }
 
+
+/* ── Tests Mersenne-64 Pool (v2.5.1) ──────────────────────────────── */
+static void test_mersenne_pool(void) {
+    printf("\n[Mersenne-64 Pool]\n");
+
+    /* Verify each pool prime returns correct k */
+    for (int i = 0; i < CAGOULE_MERSENNE_POOL_SIZE; i++) {
+        uint64_t p = CAGOULE_MERSENNE_P[i];
+        uint64_t k = CAGOULE_MERSENNE_K[i];
+        uint64_t k_lookup = cagoule_mersenne_k(p);
+        char msg[80];
+        snprintf(msg, sizeof(msg), "cagoule_mersenne_k(2^64-%llu)=%llu",
+                 (unsigned long long)k, (unsigned long long)k);
+        CHECK(k_lookup == k, msg);
+    }
+
+    /* Non-Mersenne primes return 0 */
+    CHECK(cagoule_mersenne_k(P) == 0, "non-Mersenne prime P_bench → k=0");
+    CHECK(cagoule_mersenne_k(97) == 0, "small prime 97 → k=0");
+    CHECK(cagoule_mersenne_k(2) == 0, "p=2 → k=0");
+    CHECK(cagoule_mersenne_k(3) == 0, "p=3 → k=0");
+    CHECK(cagoule_mersenne_k(65537) == 0, "p=65537 → k=0");
+
+    /* Verify all pool primes are valid (p = 2^64 - k) */
+    for (int i = 0; i < CAGOULE_MERSENNE_POOL_SIZE; i++) {
+        uint64_t p = CAGOULE_MERSENNE_P[i];
+        uint64_t k = CAGOULE_MERSENNE_K[i];
+        char msg[80];
+        snprintf(msg, sizeof(msg), "pool[%d] 2^64-%llu < 2^64", i, (unsigned long long)k);
+        CHECK(p == 18446744073709551615ULL - k + 1, msg);
+    }
+
+    /* Verify k values are in valid range (k < 2^10) */
+    for (int i = 0; i < CAGOULE_MERSENNE_POOL_SIZE; i++) {
+        uint64_t k = CAGOULE_MERSENNE_K[i];
+        char msg[80];
+        snprintf(msg, sizeof(msg), "pool[%d] k=%llu < 1024", i, (unsigned long long)k);
+        CHECK(k < 1024, msg);
+    }
+
+    /* Verify all pool primes are distinct */
+    int distinct = 1;
+    for (int i = 0; i < CAGOULE_MERSENNE_POOL_SIZE; i++) {
+        for (int j = i + 1; j < CAGOULE_MERSENNE_POOL_SIZE; j++) {
+            if (CAGOULE_MERSENNE_P[i] == CAGOULE_MERSENNE_P[j]) {
+                distinct = 0;
+                break;
+            }
+        }
+    }
+    CHECK(distinct, "all Mersenne pool primes are distinct");
+}
+
 /* ── Benchmark corrigé (ns/op précis) ─────────────────────────────── */
 static void bench_mulmod(void) {
     printf("\n[bench mulmod64 — 10M itérations]\n");
@@ -104,13 +157,14 @@ static void bench_mulmod(void) {
 /* ── Main ───────────────────────────────────────────────────────────── */
 int main(void) {
     printf("══════════════════════════════════════════\n");
-    printf("  CAGOULE v2.5.0 — test_math.c\n");
+    printf("  CAGOULE v2.5.1 — test_math.c\n");
     printf("══════════════════════════════════════════\n");
 
     test_mulmod64();
     test_addmod();
     test_powmod64();
     test_invmod64();
+    test_mersenne_pool();
     bench_mulmod();
 
     printf("\n──────────────────────────────────────────\n");

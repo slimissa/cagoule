@@ -1,5 +1,5 @@
 """
-cipher.py — Chiffrement CAGOULE v2.5.0
+cipher.py — Chiffrement CAGOULE v2.5.1
 
 Changements v2.4.0 :
   - Intégration AVX2 complète : S-box Feistel, round-key add/sub,
@@ -147,7 +147,7 @@ def _cbc_encrypt(message_bytes: bytes, params: CagouleParams) -> bytes:
     n_blocks = len(padded) // N
     p_bytes  = cagoule_p_bytes(params.p)
 
-    # v2.5.0 — z_offset est appliqué en C-layer (pas en Python)
+    # v2.5.1 — z_offset est appliqué en C-layer (pas en Python)
     if CAGOULE_C_AVAILABLE and _lib is not None:
         mat_ptr  = _get_matrix_ptr(params)
         sbox_ptr = _get_sbox_ptr(params)
@@ -159,11 +159,11 @@ def _cbc_encrypt(message_bytes: bytes, params: CagouleParams) -> bytes:
             ct_buf    = _get_out_buf(ct_size)
             # Copy round keys into reusable buffer
             rk_arr    = _get_rk_arr(len(params.round_keys))
-            # v2.5.0: population rk_arr en une seule opération C-level
+            # v2.5.1: population rk_arr en une seule opération C-level
             _rk_type = (ctypes.c_uint64 * len(params.round_keys))
             ctypes.memmove(rk_arr, _rk_type(*params.round_keys),
                           len(params.round_keys) * 8)
-            # v2.5.0: z_offset passé au C-layer (16 uint64 ou NULL)
+            # v2.5.1: z_offset passé au C-layer (16 uint64 ou NULL)
             if getattr(params, 'z_offset', None) and len(params.z_offset) == 16:
                 _zo_arr = (ctypes.c_uint64 * 16)(*params.z_offset)
                 _zo_ptr = ctypes.cast(_zo_arr, ctypes.POINTER(ctypes.c_uint64))
@@ -190,7 +190,7 @@ def _cbc_encrypt(message_bytes: bytes, params: CagouleParams) -> bytes:
             _zeroize_buf(rk_arr, len(rk_arr) * 8)  # zeroize full allocated TLS buffer
             _log.warning("cagoule_cbc_encrypt retourné %d, fallback Python", ret)
 
-    # v2.5.0: Python fallback — appliquer z_offset avant _cbc_encrypt_py
+    # v2.5.1: Python fallback — appliquer z_offset avant _cbc_encrypt_py
     if getattr(params, 'z_offset', None) and len(params.z_offset) == 16:
         _zo256  = bytes(z % 256 for z in params.z_offset)
         _tile   = _zo256 * n_blocks
@@ -256,11 +256,11 @@ def _cbc_decrypt(t_message_bytes: bytes, params: CagouleParams) -> bytes:
             pt_buf   = _get_out_buf(pt_size)
             # Copy round keys into reusable buffer
             rk_arr   = _get_rk_arr(len(params.round_keys))
-            # v2.5.0: population rk_arr en une seule opération C-level
+            # v2.5.1: population rk_arr en une seule opération C-level
             _rk_type = (ctypes.c_uint64 * len(params.round_keys))
             ctypes.memmove(rk_arr, _rk_type(*params.round_keys),
                           len(params.round_keys) * 8)
-            # v2.5.0: z_offset passé au C-layer
+            # v2.5.1: z_offset passé au C-layer
             if getattr(params, 'z_offset', None) and len(params.z_offset) == 16:
                 _dzo_arr = (ctypes.c_uint64 * 16)(*params.z_offset)
                 _dzo_ptr = ctypes.cast(_dzo_arr, ctypes.POINTER(ctypes.c_uint64))
@@ -282,7 +282,7 @@ def _cbc_decrypt(t_message_bytes: bytes, params: CagouleParams) -> bytes:
                 _zeroize_buf(pt_buf, pt_size)
                 _zeroize_buf(ct_c, ct_size)
                 _zeroize_buf(rk_arr, len(rk_arr) * 8)  # zeroize full allocated TLS buffer
-                # v2.5.0 — z_offset annulé en C-layer (pas en Python)
+                # v2.5.1 — z_offset annulé en C-layer (pas en Python)
                 return raw
             if ret == CAGOULE_ERR_CORRUPT:
                 _zeroize_buf(pt_buf, pt_size)
@@ -296,7 +296,7 @@ def _cbc_decrypt(t_message_bytes: bytes, params: CagouleParams) -> bytes:
 
     # Python fallback path
     raw = _cbc_decrypt_py(t_message_bytes, params)
-    # v2.5.0 — annuler Z-Domain Shifting — vectorisé
+    # v2.5.1 — annuler Z-Domain Shifting — vectorisé
     if getattr(params, 'z_offset', None):
         _zo     = params.z_offset
         _tile_n = len(raw) // 16
@@ -343,7 +343,7 @@ def encrypt(plaintext: bytes | str, password: bytes | str,
             params: CagouleParams | None = None,
             fast_mode: bool = False) -> bytes:
     """
-    Chiffre plaintext avec CAGOULE v2.5.0.
+    Chiffre plaintext avec CAGOULE v2.5.1.
 
     Args:
         plaintext  : Message à chiffrer (bytes ou str UTF-8).

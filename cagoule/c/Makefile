@@ -1,4 +1,4 @@
-# Makefile — CAGOULE v2.5.0 libcagoule.so
+# Makefile — CAGOULE v2.5.1 libcagoule.so
 #
 # Cibles principales :
 #   make              → compile libcagoule.so (AVX2 si disponible)
@@ -93,7 +93,7 @@ all: $(LIB)
 
 $(LIB): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-	@echo "✓ $(LIB) compilé (CAGOULE v2.5.0)"
+	@echo "✓ $(LIB) compilé (CAGOULE v2.5.1)"
 
 %.o: %.c
 	$(CC) $(CFLAGS) -MMD -c $< -o $@
@@ -104,7 +104,7 @@ tests: $(LIB) test_math test_matrix test_sbox test_cipher test_omega \
              test_math_avx2 test_matrix_avx2 test_sbox_avx2 test_cipher_pipeline4 test_mersenne
 	@echo ""
 	@echo "══════════════════════════════════════════════════════"
-	@echo "  Exécution des tests CAGOULE v2.5.0"
+	@echo "  Exécution des tests CAGOULE v2.5.1"
 	@echo "══════════════════════════════════════════════════════"
 	@status=0; \
 	./test_mersenne      && echo "✓ test_mersenne      OK" || { echo "✗ test_mersenne      FAIL"; status=1; }; \
@@ -136,8 +136,8 @@ test-scalar: $(LIB) test_matrix_avx2 test_sbox_avx2
 test_mersenne: tests/test_mersenne.c $(LIB) include/cagoule_math.h include/cagoule_math_avx2.h
 	$(CC) $(CFLAGS) $(CFLAGS_AVX2) $< -L. -lcagoule -Wl,-rpath,. -o $@ $(LDLIBS)
 
-test_math: tests/test_math.c include/cagoule_math.h
-	$(CC) $(CFLAGS) $< -o $@ $(LDLIBS)
+test_math: tests/test_math.c $(LIB) include/cagoule_math.h
+	$(CC) $(CFLAGS) $< -L. -lcagoule -Wl,-rpath,. -o $@ $(LDLIBS)
 
 test_matrix: tests/test_matrix.c $(LIB) include/cagoule_math.h include/cagoule_matrix.h
 	$(CC) $(CFLAGS) $< -L. -lcagoule -Wl,-rpath,. -o $@ $(LDLIBS)
@@ -166,7 +166,7 @@ test_sbox_avx2: tests/test_sbox_avx2.c $(LIB) \
 # ── Benchmarks ───────────────────────────────────────────────────────────
 bench: $(LIB) test_math test_matrix test_sbox test_omega test_matrix_avx2 test_sbox_avx2
 	@echo "══════════════════════════════════════════════════════"
-	@echo "  Benchmarks CAGOULE v2.5.0"
+	@echo "  Benchmarks CAGOULE v2.5.1"
 	@echo "══════════════════════════════════════════════════════"
 	@./test_math && ./test_matrix && ./test_sbox && ./test_omega
 	@./test_matrix_avx2 && ./test_sbox_avx2
@@ -226,7 +226,7 @@ clean:
 # ── Aide ─────────────────────────────────────────────────────────────────
 help:
 	@echo "══════════════════════════════════════════════════════"
-	@echo "  CAGOULE v2.5.0 — Cibles disponibles"
+	@echo "  CAGOULE v2.5.1 — Cibles disponibles"
 	@echo "══════════════════════════════════════════════════════"
 	@echo "  make              → compile libcagoule.so"
 	@echo "  make tests        → tous les tests C (scalaire + AVX2)"

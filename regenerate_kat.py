@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-regenerate_kat.py — Régénération des vecteurs KAT — CAGOULE v2.5.0  
+regenerate_kat.py — Régénération des vecteurs KAT — CAGOULE v2.5.1  
 
 Usage :
     python3 regenerate_kat.py           # KAT chiffrement uniquement
@@ -57,7 +57,7 @@ with warnings.catch_warnings():
 
 def banner():
     print("═" * 60)
-    print("  regenerate_kat.py — CAGOULE v2.5.0")
+    print("  regenerate_kat.py — CAGOULE v2.5.1")
     print(f"  Backend chiffrement : {'C (libcagoule.so)' if CAGOULE_C_AVAILABLE else 'Python pur'}")
     print(f"  Backend omega       : {OMEGA_BACKEND}")
     print("═" * 60)
@@ -162,7 +162,7 @@ def regenerate_omega_kat() -> dict:
 
 def main():
     global _nonce_counter
-    parser = argparse.ArgumentParser(description="Régénération KAT CAGOULE v2.5.0")
+    parser = argparse.ArgumentParser(description="Régénération KAT CAGOULE v2.5.1")
     parser.add_argument("--omega", action="store_true",
                         help="Régénère aussi les vecteurs KAT omega")
     parser.add_argument("--all", action="store_true",

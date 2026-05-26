@@ -301,7 +301,7 @@ static void test_backend_detection(void) {
     printf("  [7] cagoule_sbox_backend_is_avx2()...\n");
     int avx2 = cagoule_sbox_backend_is_avx2();
 #ifdef __AVX2__
-    ASSERT(avx2 == 0 || avx2 != 0, "backend_is_avx2 retourne %d (attendu 0 ou 1)", avx2);
+    ASSERT(avx2 != 0, "backend_is_avx2 devrait retourner != 0 sur CPU AVX2 (reçu %d)", avx2);
     printf("      Backend S-box AVX2 : ✓ actif (retour=%d)\n", avx2);
 #else
     ASSERT(avx2 == 0, "backend_is_avx2 devrait retourner 0 (non compilé)");

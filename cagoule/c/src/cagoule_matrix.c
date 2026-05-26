@@ -1,5 +1,5 @@
 /**
- * cagoule_matrix.c — Matrice de diffusion Vandermonde CAGOULE v2.5.0
+ * cagoule_matrix.c — Matrice de diffusion Vandermonde CAGOULE v2.5.1
  *
  * Nouveautés v2.2.0 :
  *   - Dispatch runtime AVX2 : détection via __builtin_cpu_supports("avx2")
@@ -251,13 +251,23 @@ void _matmul16_scalar(const uint64_t mat[CAGOULE_N][CAGOULE_N],
  */
 static volatile int _g_avx2_ready = 0;
 
-/* Manual CPUID check for AVX2 — not affected by compiler flags.
-/* AVX2 detection stub — returns 0 (scalar path).
- * v2.5.0: AVX2 code paths enabled via compile-time __AVX2__ flag.
- * Separate AVX2-compiled objects (cagoule_matrix_avx2.c, etc.) execute
- * the actual AVX2 instructions. This runtime check is cosmetic. */
+/* AVX2 detection via /proc/cpuinfo — reliable and immune to compiler flags.
+ * v2.5.1: replaced CPUID asm (broken by GCC 13 -O3 optimization)
+ *         with a simple /proc/cpuinfo read that always works. */
+#include <string.h>
 static int _check_avx2_cpuid(void) {
-    return 0;
+    FILE *f = fopen("/proc/cpuinfo", "r");
+    if (!f) return 0;
+    char line[4096];
+    int found = 0;
+    while (fgets(line, sizeof(line), f)) {
+        if (strstr(line, "flags") && strstr(line, "avx2")) {
+            found = 1;
+            break;
+        }
+    }
+    fclose(f);
+    return found;
 }
 
 
