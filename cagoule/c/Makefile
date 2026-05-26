@@ -247,5 +247,8 @@ test_cipher_pipeline4: tests/test_cipher_pipeline4.c $(LIB) \
                        include/cagoule_sbox_avx2.h
 	$(CC) $(CFLAGS) $(CFLAGS_AVX2) $< -L. -lcagoule -Wl,-rpath,. -o $@ $(LDLIBS)
 
+test_constant_time: tests/test_constant_time.c $(LIB) include/cagoule_math.h include/cagoule_math_avx2.h
+	$(CC) $(CFLAGS) $(CFLAGS_AVX2) $< -L. -lcagoule -Wl,-rpath,. -o $@ $(LDLIBS) -lm
+
 test-cipher-pipeline: $(LIB) test_cipher_pipeline4
 	./test_cipher_pipeline4 && echo "✓ test_cipher_pipeline4 OK"

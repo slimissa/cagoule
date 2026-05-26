@@ -1,7 +1,7 @@
 /**
- * cagoule_cipher.c — Pipeline CBC CAGOULE v2.5.0
+ * cagoule_cipher.c — Pipeline CBC CAGOULE v2.5.4
  *
- * v2.5.0 — Z-Domain Shifting en C-layer (niveau octet) :
+ * v2.5.4 — Z-Domain Shifting inline (no malloc) :
  *   z_offset[16] ∈ Z/pZ transmis depuis Python.
  *   Appliqué comme whitening additif sur les OCTETS du plaintext :
  *     encrypt : byte[j] = (byte[j] + zo[j] % 256) % 256  AVANT chiffrement
@@ -11,8 +11,7 @@
  *   indistinguable d'un octet aléatoire pour un attaquant sans k_master.
  *
  *   Implémentation :
- *     _apply_zshift : loop C sur tous les octets du buffer padded.
- *     _undo_zshift  : loop C sur tous les octets du buffer plaintext.
+ * v2.5.4: Z-shift applied inline in _load_plain / _cbc_unsub — no malloc, no copy.
  *     Pré-calcul : zo_byte[16] = {zo[i]%256, ...} → 1 tableau de 16 uint8.
  *     Cost : 1 modulo par octet, ~6-8 ms/MB en C (vs 82 ms en Python).
  *
@@ -83,25 +82,7 @@ static inline void _precompute_zo_byte(const uint64_t* zo, size_t nzo,
         zo_byte[i] = (uint8_t)(zo[i] % 256);
 }
 
-/* Appliquer z_offset sur n_blocks × 16 octets (encrypt) */
-static inline void _apply_zshift(uint8_t* buf, size_t n_blocks,
-                                   const uint8_t zo_byte[N]) {
-    for (size_t bi = 0; bi < n_blocks; bi++) {
-        uint8_t* blk = buf + bi * N;
-        for (int j = 0; j < N; j++)
-            blk[j] = (uint8_t)(blk[j] + zo_byte[j]);   /* mod 256 implicite */
-    }
-}
-
-/* Annuler z_offset sur n_blocks × 16 octets (decrypt) */
-static inline void _undo_zshift(uint8_t* buf, size_t n_blocks,
-                                  const uint8_t zo_byte[N]) {
-    for (size_t bi = 0; bi < n_blocks; bi++) {
-        uint8_t* blk = buf + bi * N;
-        for (int j = 0; j < N; j++)
-            blk[j] = (uint8_t)(blk[j] - zo_byte[j]);   /* mod 256 implicite */
-    }
-}
+/* v2.5.4: _apply_zshift and _undo_zshift removed — Z-shift now applied inline in _load_plain/_cbc_unsub */
 
 #if defined(__AVX2__)
 /* ── Sérialisation AVX2 ─────────────────────────────────────────────── */
@@ -137,8 +118,18 @@ static inline void _load_blk(const uint8_t* src, uint64_t bl[N]) {
     _mm256_storeu_si256((__m256i*)&bl[12], _bswap64x4(r));
 }
 
-static inline void _load_plain(const uint8_t* src, uint64_t bl[N]) {
-    __m128i raw = _mm_loadu_si128((const __m128i*)src);
+/* v2.5.4: Z-shift applied inline — no malloc needed */
+static inline void _load_plain(const uint8_t* src, uint64_t bl[N],
+                                const uint8_t zo_byte[N]) {
+    /* Load 16 bytes, apply Z-shift if zo_byte is provided, zero-extend to uint64 */
+    uint8_t tmp[16];
+    if (zo_byte) {
+        for (int j = 0; j < 16; j++)
+            tmp[j] = (uint8_t)(src[j] + zo_byte[j]);  /* mod 256 */
+    } else {
+        memcpy(tmp, src, 16);
+    }
+    __m128i raw = _mm_loadu_si128((const __m128i*)tmp);
     _mm256_storeu_si256((__m256i*)&bl[0],
         _mm256_cvtepu8_epi64(_mm_srli_si128(raw,  0)));
     _mm256_storeu_si256((__m256i*)&bl[4],
@@ -176,8 +167,10 @@ static inline void _cbc_add(uint64_t bl[N], const uint64_t prev[N], uint64_t p) 
     }
 }
 
+/* v2.5.4: inverse Z-shift applied inline */
 static inline int _cbc_unsub(const uint64_t m[N], const uint64_t prev[N],
-                               uint8_t* dst, uint64_t p) {
+                               uint8_t* dst, uint64_t p,
+                               const uint8_t zo_byte[N]) {
     __m256i pv = _mm256_set1_epi64x((int64_t)p);
     uint64_t tmp[N];
     for (int j = 0; j < N; j += 4) {
@@ -187,7 +180,7 @@ static inline int _cbc_unsub(const uint64_t m[N], const uint64_t prev[N],
     }
     for (int j = 0; j < N; j++) {
         if (tmp[j] > 255) return 0;
-        dst[j] = (uint8_t)tmp[j];
+        dst[j] = (uint8_t)(zo_byte ? ((tmp[j] - zo_byte[j]) & 0xFF) : tmp[j]);
     }
     return 1;
 }
@@ -195,14 +188,15 @@ static inline int _cbc_unsub(const uint64_t m[N], const uint64_t prev[N],
 /* ── Encrypt mono-bloc ───────────────────────────────────────────────── */
 static int _enc_mono(const uint8_t* padded, size_t nb, uint8_t* out, size_t os,
                       const CagouleMatrix* mat, const CagouleSBox64* sb,
-                      const uint64_t* rk, size_t nk, uint64_t p)
+                      const uint64_t* rk, size_t nk, uint64_t p,
+                      const uint8_t zo_byte[N])
 {
     size_t pb = _pb(p);
     if (os < nb*N*pb) return CAGOULE_ERR_SIZE;
     uint64_t buf[2][N]; memset(buf,0,sizeof(buf));
     uint64_t *prev=buf[0], *blk=buf[1], tmp[N];
     for (size_t bi=0; bi<nb; bi++) {
-        _load_plain(padded+bi*N, blk);
+        _load_plain(padded+bi*N, blk, zo_byte);
         _cbc_add(blk, prev, p);
         cagoule_matrix_mul_avx2(mat, blk, tmp);
         _sbox_block_forward_hot_avx2(sb, tmp, blk, N);
@@ -216,7 +210,8 @@ static int _enc_mono(const uint8_t* padded, size_t nb, uint8_t* out, size_t os,
 /* ── Encrypt pipeline4 ──────────────────────────────────────────────── */
 static int _enc_p4(const uint8_t* padded, size_t nb, uint8_t* out, size_t os,
                     const CagouleMatrix* mat, const CagouleSBox64* sb,
-                    const uint64_t* rk, size_t nk, uint64_t p)
+                    const uint64_t* rk, size_t nk, uint64_t p,
+                    const uint8_t zo_byte[N])
 {
     size_t pb = _pb(p);
     if (os < nb*N*pb) return CAGOULE_ERR_SIZE;
@@ -229,7 +224,7 @@ static int _enc_p4(const uint8_t* padded, size_t nb, uint8_t* out, size_t os,
             __builtin_prefetch(padded+(bi+6)*N,0,1);
             __builtin_prefetch(padded+(bi+7)*N,0,1);
         }
-#define EB(I) _load_plain(padded+(bi+(I))*N,blk); \
+#define EB(I) _load_plain(padded+(bi+(I))*N,blk,zo_byte); \
     _cbc_add(blk,prev,p); cagoule_matrix_mul_avx2(mat,blk,tmp); \
     _sbox_block_forward_hot_avx2(sb,tmp,blk,N); \
     _rk_add(blk,rk[(bi+(I))%nk],p); \
@@ -238,7 +233,7 @@ static int _enc_p4(const uint8_t* padded, size_t nb, uint8_t* out, size_t os,
 #undef EB
     }
     for (; bi<nb; bi++) {
-        _load_plain(padded+bi*N,blk); _cbc_add(blk,prev,p);
+        _load_plain(padded+bi*N,blk,zo_byte); _cbc_add(blk,prev,p);
         cagoule_matrix_mul_avx2(mat,blk,tmp);
         _sbox_block_forward_hot_avx2(sb,tmp,blk,N);
         _rk_add(blk,rk[bi%nk],p); _store_blk(blk,out+bi*N*pb);
@@ -250,7 +245,8 @@ static int _enc_p4(const uint8_t* padded, size_t nb, uint8_t* out, size_t os,
 /* ── Decrypt mono-bloc ───────────────────────────────────────────────── */
 static int _dec_mono(const uint8_t* cb, size_t nb, uint8_t* out, size_t os,
                       const CagouleMatrix* mat, const CagouleSBox64* sb,
-                      const uint64_t* rk, size_t nk, uint64_t p)
+                      const uint64_t* rk, size_t nk, uint64_t p,
+                      const uint8_t zo_byte[N])
 {
     size_t pb = _pb(p);
     if (os < nb*N) return CAGOULE_ERR_SIZE;
@@ -261,7 +257,7 @@ static int _dec_mono(const uint8_t* cb, size_t nb, uint8_t* out, size_t os,
         _rk_sub(cblk, rk[bi%nk], p);
         _sbox_block_inverse_hot_avx2(sb, cblk, tmp, N);
         cagoule_matrix_mul_inv_avx2(mat, tmp, cblk);
-        if (!_cbc_unsub(cblk, prev, out+bi*N, p)) {
+        if (!_cbc_unsub(cblk, prev, out+bi*N, p, zo_byte)) {
             _mm256_zeroupper(); return CAGOULE_ERR_CORRUPT;
         }
         memcpy(prev,cs,N*8);
@@ -272,7 +268,8 @@ static int _dec_mono(const uint8_t* cb, size_t nb, uint8_t* out, size_t os,
 /* ── Decrypt pipeline4 ──────────────────────────────────────────────── */
 static int _dec_p4(const uint8_t* cb, size_t nb, uint8_t* out, size_t os,
                     const CagouleMatrix* mat, const CagouleSBox64* sb,
-                    const uint64_t* rk, size_t nk, uint64_t p)
+                    const uint64_t* rk, size_t nk, uint64_t p,
+                    const uint8_t zo_byte[N])
 {
     size_t pb = _pb(p);
     if (os < nb*N) return CAGOULE_ERR_SIZE;
@@ -296,10 +293,10 @@ static int _dec_p4(const uint8_t* cb, size_t nb, uint8_t* out, size_t os,
         cagoule_matrix_mul_inv_avx2(mat,tmp[1],cblk[1]);
         cagoule_matrix_mul_inv_avx2(mat,tmp[2],cblk[2]);
         cagoule_matrix_mul_inv_avx2(mat,tmp[3],cblk[3]);
-        if (!_cbc_unsub(cblk[0],saved[0],out+(bi+0)*N,p)) goto corrupt;
-        if (!_cbc_unsub(cblk[1],saved[1],out+(bi+1)*N,p)) goto corrupt;
-        if (!_cbc_unsub(cblk[2],saved[2],out+(bi+2)*N,p)) goto corrupt;
-        if (!_cbc_unsub(cblk[3],saved[3],out+(bi+3)*N,p)) goto corrupt;
+        if (!_cbc_unsub(cblk[0],saved[0],out+(bi+0)*N,p,zo_byte)) goto corrupt;
+        if (!_cbc_unsub(cblk[1],saved[1],out+(bi+1)*N,p,zo_byte)) goto corrupt;
+        if (!_cbc_unsub(cblk[2],saved[2],out+(bi+2)*N,p,zo_byte)) goto corrupt;
+        if (!_cbc_unsub(cblk[3],saved[3],out+(bi+3)*N,p,zo_byte)) goto corrupt;
         memcpy(prev,saved[4],N*8);
     }
     for (; bi<nb; bi++) {
@@ -308,7 +305,7 @@ static int _dec_p4(const uint8_t* cb, size_t nb, uint8_t* out, size_t os,
         _rk_sub(cblk[0],rk[bi%nk],p);
         _sbox_block_inverse_hot_avx2(sb,cblk[0],tmp[0],N);
         cagoule_matrix_mul_inv_avx2(mat,tmp[0],cblk[0]);
-        if (!_cbc_unsub(cblk[0],saved[0],out+bi*N,p)) goto corrupt;
+        if (!_cbc_unsub(cblk[0],saved[0],out+bi*N,p,zo_byte)) goto corrupt;
     }
     _mm256_zeroupper(); return CAGOULE_OK;
 corrupt:
@@ -339,31 +336,14 @@ int cagoule_cbc_encrypt(
     int use_zo = (zo && nzo >= (size_t)N);
     if (use_zo) _precompute_zo_byte(zo, nzo, zo_byte);
 
-    /* z_offset sur copie locale du plaintext paddé */
-    if (use_zo) {
-        /* On ne peut pas modifier `padded` (const). Appliquer bloc par bloc
-         * pendant le traitement : z_shift est appliqué après _load_plain. */
-    }
+    /* v2.5.4: Z-shift applied inline in _load_plain — no malloc needed */
 
 #if defined(__AVX2__)
     if (_avx2_ok() && sbox->use_feistel) {
-        if (use_zo) {
-            /* Créer buffer temporaire avec z_offset appliqué */
-            size_t total_bytes = n_blocks * N;
-            uint8_t* padded_zo = (uint8_t*)malloc(total_bytes);
-            if (!padded_zo) return CAGOULE_ERR_NULL;
-            memcpy(padded_zo, padded, total_bytes);
-            _apply_zshift(padded_zo, n_blocks, zo_byte);
-            int r = (n_blocks >= CAGOULE_PIPELINE4_THRESHOLD)
-                ? _enc_p4(padded_zo, n_blocks, out, out_size, mat, sbox, rk, nk, p)
-                : _enc_mono(padded_zo, n_blocks, out, out_size, mat, sbox, rk, nk, p);
-            memset(padded_zo, 0, total_bytes);
-            free(padded_zo);
-            return r;
-        }
+        const uint8_t* zo_ptr = use_zo ? zo_byte : NULL;
         return (n_blocks >= CAGOULE_PIPELINE4_THRESHOLD)
-            ? _enc_p4(padded, n_blocks, out, out_size, mat, sbox, rk, nk, p)
-            : _enc_mono(padded, n_blocks, out, out_size, mat, sbox, rk, nk, p);
+            ? _enc_p4(padded, n_blocks, out, out_size, mat, sbox, rk, nk, p, zo_ptr)
+            : _enc_mono(padded, n_blocks, out, out_size, mat, sbox, rk, nk, p, zo_ptr);
     }
 #endif
 
@@ -407,12 +387,10 @@ int cagoule_cbc_decrypt(
 
 #if defined(__AVX2__)
     if (_avx2_ok() && sbox->use_feistel) {
-        int r = (n_blocks >= CAGOULE_PIPELINE4_THRESHOLD)
-            ? _dec_p4(cb, n_blocks, out, out_size, mat, sbox, rk, nk, p)
-            : _dec_mono(cb, n_blocks, out, out_size, mat, sbox, rk, nk, p);
-        if (r == CAGOULE_OK && use_zo)
-            _undo_zshift(out, n_blocks, zo_byte);
-        return r;
+        const uint8_t* zo_ptr = use_zo ? zo_byte : NULL;
+        return (n_blocks >= CAGOULE_PIPELINE4_THRESHOLD)
+            ? _dec_p4(cb, n_blocks, out, out_size, mat, sbox, rk, nk, p, zo_ptr)
+            : _dec_mono(cb, n_blocks, out, out_size, mat, sbox, rk, nk, p, zo_ptr);
     }
 #endif
 
