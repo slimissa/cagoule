@@ -221,6 +221,7 @@ clean:
 	rm -f test_math_avx2 test_matrix_avx2 test_sbox_avx2 test_cipher_pipeline4 test_mersenne
 	rm -f *.gcda *.gcno *.gcov
 	rm -f /tmp/_chk_ossl /tmp/valgrind_*.log
+	rm -f fuzz_cipher crash-* fuzz_cipher.log
 	@echo "✓ clean terminé"
 
 # ── Aide ─────────────────────────────────────────────────────────────────
@@ -252,3 +253,17 @@ test_constant_time: tests/test_constant_time.c $(LIB) include/cagoule_math.h inc
 
 test-cipher-pipeline: $(LIB) test_cipher_pipeline4
 	./test_cipher_pipeline4 && echo "✓ test_cipher_pipeline4 OK"
+
+# ── Fuzz targets (v2.5.4) ──────────────────────────────────────────────
+# Requires clang with libFuzzer (-fsanitize=fuzzer)
+fuzz_cipher: fuzz/fuzz_cipher.c $(LIB)
+	clang -O1 -g -fsanitize=fuzzer,address,undefined \
+	      -Iinclude $< -L. -lcagoule -Wl,-rpath,. -o $@ $(LDLIBS)
+
+fuzz: fuzz_cipher
+	@echo "Starting fuzzer (1M iterations)..."
+	./fuzz_cipher -max_len=65536 -runs=1000000
+
+fuzz-long: fuzz_cipher
+	@echo "Starting fuzzer (10M iterations, may take hours)..."
+	./fuzz_cipher -max_len=65536 -runs=10000000
