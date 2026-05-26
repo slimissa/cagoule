@@ -7,7 +7,7 @@
 #   - Suite parallel : iterations=20, warmup=5 pour stabilité statistique
 
 [bench]
-version         = "2.5.3"
+version         = "2.5.4"
 output_format   = "console"          # "console" | "json" | "csv"
 output_file     = ""                 # "" = stdout
 units           = "MB/s"

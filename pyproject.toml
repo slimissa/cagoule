@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name        = "cagoule"
-version     = "2.5.3"
+version     = "2.5.4"
 description = "Cryptographie Algébrique Géométrique par Ondes et Logique Entrelacée"
 readme      = "README.md"
 license     = { text = "MIT" }

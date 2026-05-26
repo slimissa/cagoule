@@ -170,7 +170,7 @@ pytest tests/ -v                  # 578 Python tests
 | `test_omega` | 154 | ζ(2n), HKDF round keys, OpenSSL, thread-safety |
 | `test_math_avx2` | 16,489 | `mulmod64x4` / `addmod64x4` / `submod64x4` parity |
 | `test_matrix_avx2` | 4,261 | AVX2 Vandermonde parity, roundtrip, bench |
-| `test_sbox_avx2` | 22,503 | AVX2 Feistel parity (400K cases), edge, bench |
+| `test_sbox_avx2` | 22.5.4 | AVX2 Feistel parity (400K cases), edge, bench |
 | `test_cipher_pipeline4` | 88 | Pipeline4 edge cases, residual regression, 10K parity |
 
 ### Python Tests — 578 passed, 0 failed, 20 skipped
