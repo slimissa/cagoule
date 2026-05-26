@@ -7,7 +7,7 @@
 #   - Suite parallel : iterations=20, warmup=5 pour stabilité statistique
 
 [bench]
-version         = "2.5.2"
+version         = "2.5.3"
 output_format   = "console"          # "console" | "json" | "csv"
 output_file     = ""                 # "" = stdout
 units           = "MB/s"
@@ -77,3 +77,11 @@ cv_warn_pct = 5.0
 default_workers = "auto"
 # Mode bulk activé par défaut pour les pipelines JSON (> 1 message)
 bulk_auto       = true
+
+[suites.mersenne]
+# v2.5.3: Mersenne-64 pool validation benchmark
+enabled     = true
+warmup      = 2
+iterations  = 10
+# Benchmarks mulmod_mersenne64x4 vs mulmod64 Barrett for all 8 primes
+primes      = "all"

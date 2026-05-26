@@ -1,6 +1,6 @@
 /**
  * cagoule_math_avx2.h — Arithmétique modulaire 64-bit vectorisée (AVX2)
- *                       CAGOULE v2.4.0
+ *                       CAGOULE v2.5.3
  *
  * Fournit mulmod64x4(), addmod64x4(), submod64x4() traitant 4 éléments
  * uint64_t simultanément dans des registres __m256i (256-bit, AVX2).

@@ -2,7 +2,7 @@
  * cagoule_cipher.h — Pipeline CBC-like CAGOULE v2.5.0
  *
  * v2.5.0 — Z-Domain Shifting en C-layer :
- *   z_offset[16] uint64 ∈ Z/pZ appliqué avant la matrice (encrypt)
+ *   z_offset[16] uint64 ∈ Z/pZ, appliqué comme byte[i] = (byte[i] + zo[i]%256) % 256 (Z/256Z byte domain) avant la matrice (encrypt)
  *   et soustrait après la S-box inverse (decrypt). Coût ~8 ms/MB
  *   vs 82 ms/MB en Python. Gain : +32% Python e2e.
  *

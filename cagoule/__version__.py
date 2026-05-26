@@ -1,5 +1,5 @@
-__version__      = "2.5.2"
-__version_info__ = (2, 5, 2)
+__version__      = "2.5.3"
+__version_info__ = (2, 5, 3)
 __release_date__ = "2026-05-26"
 __author__       = "Slim Issa"
 __license__      = "MIT"
