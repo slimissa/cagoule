@@ -1,4 +1,4 @@
-# CAGOULE v2.5.7
+# CAGOULE v2.5.4
 
 **Cryptographie Algébrique Géométrique par Ondes et Logique Entrelacée**
 
@@ -18,7 +18,7 @@ CAGOULE is a symmetric hybrid encryption system combining ChaCha20-Poly1305, Arg
 
 ---
 
-## What's New in v2.5.7
+## What's New in v2.5.4
 
 v2.5.7 is the culmination of the v2.5.x **Mersenne Acceleration** cycle, adding security hardening, fuzz testing, threat modeling, and multi-arch CI to the core v2.5.0 performance improvements.
 
@@ -50,7 +50,7 @@ v2.5.7 is the culmination of the v2.5.x **Mersenne Acceleration** cycle, adding 
 | Mersenne pool roundtrip tests in `test_matrix.c` (+33 assertions) | v2.5.2 |
 | Z-Domain doc fix, version strings, Mersenne benchmark suite | v2.5.3 |
 
-### v2.5.4–v2.5.7: Security Hardening
+### v2.5.4: Security Hardening
 
 | Priority | Feature | Version |
 |----------|---------|---------|
@@ -195,7 +195,7 @@ assert pts == messages
 ```python
 from cagoule import __version__, backend_info
 
-print(__version__)          # "2.5.7"
+print(__version__)          # "2.5.5"
 print(backend_info)         # {'matrix_backend': 'avx2', 'omega_backend': 'C', 'sbox_backend': 'avx2'}
 ```
 
@@ -249,10 +249,10 @@ pytest tests/ -v                  # 578 Python tests
 
 ### v2.5.x Backlog
 
-- QShell primitives: `cgl encrypt`, `cgl decrypt`, `cgl bench`, `cgl info`
+- Las_shell primitives: `cgl encrypt`, `cgl decrypt`, `cgl bench`, `cgl info`
 - PyPI `manylinux` wheel
 - Formal algebraic specification + IACR ePrint submission
-- `cagoule-pass` v2.0.0 with `qshell vault` command
+- `cagoule-pass` v2.0.0 with `Lass_shell vault` command
 
 ### v3.0.0
 
@@ -264,19 +264,12 @@ pytest tests/ -v                  # 578 Python tests
 
 ## Changelog
 
-### v2.5.7 — 2026-05-27
-- **P4**: CI multi-arch matrix (x86_64 native + ARM64 via QEMU)
-- Updated README with AMD support and platform table
-
-### v2.5.6 — 2026-05-27
-- **P3**: SECURITY.md — complete threat model and security policy
-
-### v2.5.5 — 2026-05-26
-- **P2**: libFuzzer harness — 500K iterations, 0 crashes, 0 memory leaks
-
 ### v2.5.4 — 2026-05-26
 - **P0**: Z-Domain inline — eliminated malloc in encrypt hot path
 - **P1**: dudect constant-time empirical validation
+- **P2**: libFuzzer harness — 500K iterations, 0 crashes, 0 memory leaks
+- **P3**: SECURITY.md — complete threat model and security policy
+- **P4**: CI multi-arch matrix (x86_64 native + ARM64 via QEMU)
 
 ### v2.5.3 — 2026-05-26
 - Z-Domain doc fix in `cagoule_cipher.h`
@@ -327,3 +320,4 @@ Part of the [QuantOS](https://github.com/slimissa/LAS_Shell) platform.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
