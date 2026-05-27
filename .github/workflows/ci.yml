@@ -1,0 +1,47 @@
+name: CI Multi-Arch
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  test-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y gcc libssl-dev pkg-config python3-pip
+      - name: Build C
+        run: cd cagoule/c && make
+      - name: C tests
+        run: cd cagoule/c && make tests
+      - name: Python tests
+        run: pip install -e ".[dev]" && pytest tests/ -v
+
+  test-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup ARM64
+        run: |
+          sudo dpkg --add-architecture arm64 && sudo apt-get update
+          sudo apt-get install -y qemu-user-static gcc-aarch64-linux-gnu
+          sudo apt-get install -y libssl-dev:arm64 || true
+      - name: Build ARM64
+        run: |
+          cd cagoule/c
+          CC=aarch64-linux-gnu-gcc make clean
+          sed -i 's|HAS_AVX2 :=.*|HAS_AVX2 := no|' Makefile
+          CC=aarch64-linux-gnu-gcc make
+      - name: ARM64 C tests
+        run: |
+          cd cagoule/c
+          for t in test_math test_matrix test_sbox test_cipher test_omega; do
+            qemu-aarch64 -L /usr/aarch64-linux-gnu ./$t || exit 1
+          done
+      - name: Python tests
+        run: pip install -e ".[dev]" && pytest tests/ -v
