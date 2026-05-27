@@ -2,7 +2,7 @@
 
 **Cryptographie Algébrique Géométrique par Ondes et Logique Entrelacée**
 
-[![Version](https://img.shields.io/badge/version-2.5.7-blue)](https://github.com/slimissa/cagoule)
+[![Version](https://img.shields.io/badge/version-2.5.4-blue)](https://github.com/slimissa/cagoule)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12+-blue)](https://www.python.org)
 [![Platform](https://img.shields.io/badge/platform-x86__64%20%7C%20AMD64%20%7C%20ARM64-lightgrey)](https://github.com/slimissa/cagoule)
