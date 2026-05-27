@@ -52,13 +52,13 @@ v2.5.7 is the culmination of the v2.5.x **Mersenne Acceleration** cycle, adding 
 
 ### v2.5.4: Security Hardening
 
-| Priority | Feature | Version |
-|----------|---------|---------|
-| **P0** | Z-Domain inline — no malloc in encrypt hot path | v2.5.4 |
-| **P1** | dudect constant-time empirical validation | v2.5.4 |
-| **P2** | libFuzzer harness — 500K clean runs, 0 crashes | v2.5.5 |
-| **P3** | SECURITY.md — complete threat model and security policy | v2.5.6 |
-| **P4** | CI multi-arch matrix (x86_64 native + ARM64 QEMU) | v2.5.7 |
+| Priority | Feature |
+|----------|---------|
+| **P0** | Z-Domain inline — no malloc in encrypt hot path |
+| **P1** | dudect constant-time empirical validation |
+| **P2** | libFuzzer harness — 500K clean runs, 0 crashes |
+| **P3** | SECURITY.md — complete threat model and security policy |
+| **P4** | CI multi-arch matrix (x86_64 native + ARM64 QEMU) |
 
 ---
 
