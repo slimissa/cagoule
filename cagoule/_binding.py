@@ -1,5 +1,10 @@
 """
-_binding.py — Chargeur ctypes pour libcagoule.so — CAGOULE v2.5.0
+_binding.py — Chargeur ctypes pour libcagoule.so — CAGOULE v3.0.0
+
+Nouveautés v3.0.0 :
+  - cagoule_ctr_encrypt / cagoule_ctr_decrypt / cagoule_ctr_encrypt_4x
+  - _HAS_CTR_API : détection runtime du backend CTR
+  - get_backend_info_v300() : inclut ctr_backend
 
 Nouveautés v2.4.0 :
   - GIL release on heavy C calls (cbc_encrypt/decrypt, matrix_mul, sbox_block)
@@ -19,7 +24,9 @@ Expose :
   - CagouleMatrix + cagoule_matrix_*
   - CagouleSBox64 + cagoule_sbox_*
   - cagoule_cbc_encrypt / cagoule_cbc_decrypt
-  - get_backend_info() (v2.2.0, unchanged), get_backend_info_v230() (v2.3.0)
+  - cagoule_ctr_encrypt / cagoule_ctr_decrypt / cagoule_ctr_encrypt_4x (v3.0.0)
+  - get_backend_info() (v2.2.0), get_backend_info_v230() (v2.3.0),
+    get_backend_info_v300() (v3.0.0)
 """
 
 from __future__ import annotations
@@ -108,6 +115,12 @@ class CagouleSBox64C(ctypes.Structure):
 
 # ── Signatures ctypes ─────────────────────────────────────────────────
 
+# Flags de disponibilité des API
+_HAS_AVX2_API    = False
+_HAS_SCALAR_API  = False
+_HAS_SBOX_AVX2_API = False
+_HAS_CTR_API     = False   # v3.0.0
+
 if CAGOULE_C_AVAILABLE and _lib is not None:
 
     # Matrix
@@ -123,14 +136,12 @@ if CAGOULE_C_AVAILABLE and _lib is not None:
         ctypes.POINTER(ctypes.c_uint64),
         ctypes.POINTER(ctypes.c_uint64)]
     _lib.cagoule_matrix_mul.restype = None
-    _lib.cagoule_matrix_mul.release_gil = True
 
     _lib.cagoule_matrix_mul_inv.argtypes = [
         ctypes.POINTER(CagouleMatrixC),
         ctypes.POINTER(ctypes.c_uint64),
         ctypes.POINTER(ctypes.c_uint64)]
     _lib.cagoule_matrix_mul_inv.restype = None
-    _lib.cagoule_matrix_mul_inv.release_gil = True
 
     _lib.cagoule_matrix_verify.argtypes = [ctypes.POINTER(CagouleMatrixC)]
     _lib.cagoule_matrix_verify.restype  = ctypes.c_int
@@ -141,7 +152,7 @@ if CAGOULE_C_AVAILABLE and _lib is not None:
         _lib.cagoule_matrix_backend_is_avx2.restype = ctypes.c_int
         _HAS_AVX2_API = True
     except AttributeError:
-        _HAS_AVX2_API = False
+        pass
 
     # ── v2.2.0: Scalar explicit path (for parity tests) ────────────
     try:
@@ -158,7 +169,7 @@ if CAGOULE_C_AVAILABLE and _lib is not None:
         _lib.cagoule_matrix_mul_inv_scalar.restype = None
         _HAS_SCALAR_API = True
     except AttributeError:
-        _HAS_SCALAR_API = False
+        pass
 
     # S-Box
     _lib.cagoule_sbox_init.argtypes = [
@@ -180,7 +191,6 @@ if CAGOULE_C_AVAILABLE and _lib is not None:
         ctypes.POINTER(ctypes.c_uint64),
         ctypes.c_size_t]
     _lib.cagoule_sbox_block_forward.restype = None
-    _lib.cagoule_sbox_block_forward.release_gil = True
 
     _lib.cagoule_sbox_block_inverse.argtypes = [
         ctypes.POINTER(CagouleSBox64C),
@@ -188,7 +198,14 @@ if CAGOULE_C_AVAILABLE and _lib is not None:
         ctypes.POINTER(ctypes.c_uint64),
         ctypes.c_size_t]
     _lib.cagoule_sbox_block_inverse.restype = None
-    _lib.cagoule_sbox_block_inverse.release_gil = True
+
+    # ── v2.3.0: S-box AVX2 backend detection ───────────────────────
+    try:
+        _lib.cagoule_sbox_backend_is_avx2.argtypes = []
+        _lib.cagoule_sbox_backend_is_avx2.restype = ctypes.c_int
+        _HAS_SBOX_AVX2_API = True
+    except AttributeError:
+        pass
 
     # CBC Pipeline
     _cbc_argtypes = [
@@ -203,12 +220,47 @@ if CAGOULE_C_AVAILABLE and _lib is not None:
     ]
     _lib.cagoule_cbc_encrypt.argtypes = _cbc_argtypes
     _lib.cagoule_cbc_encrypt.restype  = ctypes.c_int
-    # release_gil is handled by ctypes automatically for CDLL calls
-    # _lib.cagoule_cbc_encrypt.release_gil = True  (attribute does not exist)
 
     _lib.cagoule_cbc_decrypt.argtypes = _cbc_argtypes
     _lib.cagoule_cbc_decrypt.restype  = ctypes.c_int
-    # _lib.cagoule_cbc_decrypt.release_gil = True  (attribute does not exist)
+
+    # ── v3.0.0: CTR Mode ───────────────────────────────────────────
+    try:
+        _ctr_argtypes = [
+            ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t,  # pt/ct, len
+            ctypes.POINTER(ctypes.c_uint8),                    # iv (8 bytes)
+            ctypes.POINTER(CagouleMatrixC),                    # mat
+            ctypes.POINTER(CagouleSBox64C),                    # sbox
+            ctypes.POINTER(ctypes.c_uint64), ctypes.c_size_t,  # rk, nk
+            ctypes.c_uint64,                                    # p
+            ctypes.POINTER(ctypes.c_uint64), ctypes.c_size_t,  # z_offset, num_zo
+            ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t,   # out, out_size
+        ]
+        _lib.cagoule_ctr_encrypt.argtypes = _ctr_argtypes
+        _lib.cagoule_ctr_encrypt.restype = ctypes.c_int
+
+        _lib.cagoule_ctr_decrypt.argtypes = _ctr_argtypes
+        _lib.cagoule_ctr_decrypt.restype = ctypes.c_int
+
+        _lib.cagoule_ctr_encrypt_4x.argtypes = _ctr_argtypes
+        _lib.cagoule_ctr_encrypt_4x.restype = ctypes.c_int
+
+        # cagoule_ctr_keystream
+        _lib.cagoule_ctr_keystream.argtypes = [
+            ctypes.POINTER(ctypes.c_uint8),                    # iv
+            ctypes.c_size_t,                                    # start_bi
+            ctypes.POINTER(CagouleMatrixC),                    # mat
+            ctypes.POINTER(CagouleSBox64C),                    # sbox
+            ctypes.POINTER(ctypes.c_uint64), ctypes.c_size_t,  # rk, nk
+            ctypes.c_uint64,                                    # p
+            ctypes.POINTER(ctypes.c_uint8),                    # out
+            ctypes.c_size_t,                                    # n_blocks
+        ]
+        _lib.cagoule_ctr_keystream.restype = ctypes.c_int
+
+        _HAS_CTR_API = True
+    except AttributeError:
+        pass
 
 
 # ── Utilitaires ───────────────────────────────────────────────────────
@@ -239,7 +291,7 @@ def free_matrix(matrix_ptr) -> None:
         _lib.cagoule_matrix_free(matrix_ptr)
 
 
-# ── v2.2.0: Backend Info ──────────────────────────────────────────────
+# ── Backend Info ──────────────────────────────────────────────────────
 
 def get_backend_info() -> Dict[str, str]:
     """Retourne les informations sur les backends actifs (v2.2.0, conservé pour compatibilité).
@@ -257,7 +309,7 @@ def get_backend_info() -> Dict[str, str]:
     if CAGOULE_C_AVAILABLE and _lib is not None:
         # Détection AVX2 pour la matrice
         try:
-            if _lib.cagoule_matrix_backend_is_avx2():
+            if _HAS_AVX2_API and _lib.cagoule_matrix_backend_is_avx2():
                 info["matrix_backend"] = "avx2"
             else:
                 info["matrix_backend"] = "scalar"
@@ -270,18 +322,6 @@ def get_backend_info() -> Dict[str, str]:
         info["omega_backend"] = "python"
 
     return info
-
-# ── v2.3.0: S-box AVX2 backend detection ─────────────────────────────
-
-if CAGOULE_C_AVAILABLE and _lib is not None:
-    try:
-        _lib.cagoule_sbox_backend_is_avx2.argtypes = []
-        _lib.cagoule_sbox_backend_is_avx2.restype = ctypes.c_int
-        _HAS_SBOX_AVX2_API = True
-    except AttributeError:
-        _HAS_SBOX_AVX2_API = False
-else:
-    _HAS_SBOX_AVX2_API = False
 
 
 def get_backend_info_v230() -> Dict[str, str]:
@@ -305,5 +345,28 @@ def get_backend_info_v230() -> Dict[str, str]:
             info["sbox_backend"] = "scalar"
     else:
         info["sbox_backend"] = "python"
+
+    return info
+
+
+def get_backend_info_v300() -> Dict[str, str]:
+    """Retourne les informations complètes sur les backends actifs (v3.0.0).
+
+    Returns:
+        dict avec les clés :
+        - 'matrix_backend' : 'avx2', 'scalar', ou 'python'
+        - 'sbox_backend'   : 'avx2', 'scalar', ou 'python'
+        - 'omega_backend'  : 'C' ou 'python'
+        - 'ctr_backend'    : 'C' ou 'python'                 ← nouveau v3.0.0
+        - 'ctr_4x_available' : True/False                    ← nouveau v3.0.0
+    """
+    info = get_backend_info_v230()  # hérite v2.3.0
+
+    if CAGOULE_C_AVAILABLE and _lib is not None:
+        info["ctr_backend"] = "C" if _HAS_CTR_API else "scalar"
+        info["ctr_4x_available"] = _HAS_CTR_API
+    else:
+        info["ctr_backend"] = "python"
+        info["ctr_4x_available"] = False
 
     return info

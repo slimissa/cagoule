@@ -112,7 +112,7 @@ class TestKATParameters:
 
     def test_version(self, kat):
         """La version du KAT doit être 2.0, 2.1.0, 2.2.0, 2.3.0, ou 2.4.0."""
-        assert kat["version"] in ["2.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0", "2.5.0"], \
+        assert kat["version"] in ["2.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0", "2.5.0", "3.0.0"], \
             f"Version KAT incorrecte: {kat['version']}"
 
     def test_sbox_type(self, kat):

@@ -1,5 +1,5 @@
 """
-test_bindings.py — Validation des bindings Python → libcagoule.so — CAGOULE v2.5.0
+test_bindings.py — Validation des bindings Python → libcagoule.so — CAGOULE v3.0.0
 
 Lancement (depuis le dossier cagoule/cagoule/) :
     python3 test_bindings.py
@@ -41,7 +41,7 @@ def check(cond, msg):
         failed += 1
 
 print("══════════════════════════════════════════")
-print("  Bindings Python → libcagoule.so — v2.5.0")
+print("  Bindings Python → libcagoule.so — v3.0.0")
 print("══════════════════════════════════════════")
 
 # ── Import et disponibilité ─────────────────────────────────────────────
@@ -51,7 +51,7 @@ with warnings.catch_warnings():
     from cagoule.sbox import SBox
     from cagoule._binding import CAGOULE_C_AVAILABLE, cagoule_p_bytes
 
-    # v2.3.0: utiliser __backend__ (double underscore)
+    # v3.0.0: utiliser __backend__ (double underscore)
     try:
         from cagoule import __backend__ as backend_str
     except ImportError:
@@ -145,8 +145,8 @@ m2 = DiffusionMatrix.from_nodes(nodes_dup, P)
 check(m2.kind == "cauchy", "Cauchy fallback avec collision")
 check(m2.verify_inverse(), "Cauchy P × P⁻¹ = I")
 
-# ── v2.3.0: Backend Info ─────────────────────────────────────────────────
-print("\n[v2.5.0 — Backend Info]")
+# ── v3.0.0: Backend Info ─────────────────────────────────────────────────
+print("\n[v3.0.0 — Backend Info]")
 
 # Test get_backend_info() depuis _binding
 try:
@@ -177,8 +177,18 @@ try:
 except Exception as e:
     check(False, f"matrix.backend_info a échoué: {e}")
 
-# ── v2.2.0: free() et context manager ────────────────────────────────────
-print("\n[v2.5.0 — free() et context manager]")
+# ── v3.0.0: CTR Backend Info ─────────────────────────────────────────────
+print("\n[v3.0.0 — CTR Backend]")
+try:
+    from cagoule._binding import get_backend_info_v300, _HAS_CTR_API
+    info_v300 = get_backend_info_v300()
+    check("ctr_backend" in info_v300, "get_backend_info_v300() contient 'ctr_backend'")
+    check(info_v300["ctr_backend"] in ("C", "scalar", "python"),
+          f"ctr_backend = {info_v300['ctr_backend']}")
+    check("ctr_4x_available" in info_v300, "get_backend_info_v300() contient 'ctr_4x_available'")
+    print(f"  Backend info v3.0.0: {info_v300}")
+except Exception as e:
+    check(False, f"get_backend_info_v300() a échoué: {e}")
 
 # Test get_backend_info_v230() (v2.3.0)
 try:
@@ -188,9 +198,78 @@ try:
           "get_backend_info_v230() contient 'sbox_backend'")
     check(info_v230["sbox_backend"] in ("avx2", "scalar", "python"),
           f"sbox_backend = {info_v230['sbox_backend']}")
-    print(f"  Backend info v2.4.0: {info_v230}")
+    print(f"  Backend info v2.3.0: {info_v230}")
 except Exception as e:
     check(False, f"get_backend_info_v230() a échoué: {e}")
+
+# ── v3.0.0: VERSION Dispatch ─────────────────────────────────────────────
+print("\n[v3.0.0 — VERSION Dispatch]")
+try:
+    from cagoule import encrypt, decrypt, encrypt_cbc, decrypt_cbc
+    
+    test_msg = b"Hello CTR v3.0.0!"
+    test_pwd = b"test_password_v3"
+    
+    # CTR (default)
+    ct = encrypt(test_msg, test_pwd, fast_mode=True)
+    check(ct[4:5] == b'\x02', "encrypt() produit VERSION 0x02 (CTR)")
+    pt = decrypt(ct, test_pwd, fast_mode=True)
+    check(pt == test_msg, "decrypt() roundtrip CTR v0x02")
+    
+    # CBC (explicit)
+    ct_cbc = encrypt_cbc(test_msg, test_pwd, fast_mode=True)
+    check(ct_cbc[4:5] == b'\x01', "encrypt_cbc() produit VERSION 0x01 (CBC)")
+    pt_cbc = decrypt(ct_cbc, test_pwd, fast_mode=True)
+    check(pt_cbc == test_msg, "decrypt() dispatch CBC v0x01")
+    
+    # decrypt() dispatch: CBC ciphertext works with decrypt()
+    pt_dispatch = decrypt(ct_cbc, test_pwd, fast_mode=True)
+    check(pt_dispatch == test_msg, "decrypt() auto-dispatch CBC → correct")
+    
+    # decrypt() dispatch: CTR ciphertext works with decrypt()
+    pt_dispatch_ctr = decrypt(ct, test_pwd, fast_mode=True)
+    check(pt_dispatch_ctr == test_msg, "decrypt() auto-dispatch CTR → correct")
+
+except Exception as e:
+    check(False, f"VERSION dispatch a échoué: {e}")
+
+# ── v3.0.0: CTR Bulk ─────────────────────────────────────────────────────
+print("\n[v3.0.0 — CTR Bulk]")
+try:
+    from cagoule import encrypt_bulk, decrypt_bulk
+    
+    messages = [b"msg1", b"msg2", b"msg3"]
+    cts = encrypt_bulk(messages, test_pwd, fast_mode=True)
+    check(len(cts) == 3, "encrypt_bulk retourne 3 ciphertexts")
+    for i, ct_bulk in enumerate(cts):
+        check(ct_bulk[4:5] == b'\x02', f"encrypt_bulk[{i}] VERSION 0x02")
+    
+    pts = decrypt_bulk(cts, test_pwd, fast_mode=True)
+    check(pts == messages, "decrypt_bulk roundtrip CTR")
+except Exception as e:
+    check(False, f"CTR Bulk a échoué: {e}")
+
+# ── v3.0.0: Migration CBC → CTR ──────────────────────────────────────────
+print("\n[v3.0.0 — Migration CBC → CTR]")
+try:
+    from cagoule import migrate_cbc_to_ctr
+    
+    # Create a CBC ciphertext
+    ct_cbc_migrate = encrypt_cbc(b"Migrate me!", test_pwd, fast_mode=True)
+    check(ct_cbc_migrate[4:5] == b'\x01', "Source: VERSION 0x01 (CBC)")
+    
+    # Migrate to CTR
+    ct_ctr_migrated = migrate_cbc_to_ctr(ct_cbc_migrate, test_pwd, fast_mode=True)
+    check(ct_ctr_migrated[4:5] == b'\x02', "Migrated: VERSION 0x02 (CTR)")
+    
+    # Verify roundtrip
+    pt_migrated = decrypt(ct_ctr_migrated, test_pwd, fast_mode=True)
+    check(pt_migrated == b"Migrate me!", "Migration roundtrip OK")
+except Exception as e:
+    check(False, f"Migration a échoué: {e}")
+
+# ── free() et context manager ────────────────────────────────────────────
+print("\n[v3.0.0 — free() et context manager]")
 
 # Test free() avec guard double-free
 m3 = DiffusionMatrix.from_nodes(nodes, P)

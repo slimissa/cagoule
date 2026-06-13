@@ -1,128 +1,136 @@
 """
-CAGOULE v2.5.0 — Cryptographie Algébrique Géométrique par Ondes et Logique Entrelacée
+CAGOULE v3.0.0 — Cryptographie Algébrique Géométrique par Ondes et Logique Entrelacée
 
 Système de chiffrement symétrique hybride.
 
-Changements v2.5.0 :
-  - cagoule_sbox_avx2.c : S-box Feistel vectorisée AVX2 (4 éléments simultanés)
-  - cagoule_cipher.c : round-key add/sub via addmod64x4/submod64x4 (P2)
-  - Boucle chaude : _sbox_block_forward_hot_avx2 (broadcasts hoistés, 0 zeroupper)
-  - Correction endianness AVX2 vs scalaire (_bswap64x4 dans store/load)
-  - 560/560 tests pytest (CI déterministe, ALPHA_CHI2 sur tous les tests chi²)
-  - get_backend_info_v230() exposant 'sbox_backend'
-
-Changements v2.2.0 :
-  - cagoule_matrix_avx2.c : multiplication Vandermonde vectorisée AVX2 (4 lignes)
-  - cagoule_math_avx2.h : mulmod64x4/addmod64x4/submod64x4 via Barrett SIMD
-  - Dispatch runtime AVX2 avec fallback scalaire automatique
-  - backend_info exposé : matrice (avx2/scalaire), omega (C/mpmath)
-
-Changements v2.1.0 :
-  - omega.c : portage C de ζ(2n) → round keys (suppression mpmath en production)
-  - Fix test_mauvais_mdp : mauvais mot de passe détecté même avec params= fourni
-  - CagouleAuthError enrichi : .reason, .hint, .ct_size, .backend
-  - CagouleFormatError enrichi : .field, .data_size, .min_size
-  - CagouleParams.fast_mode : mode KDF mémorisé pour re-dérivation correcte
+Nouveautés v3.0.0 — CTR Mode :
+  - Mode CTR (Counter) : chiffrement sans dépendance inter-bloc → ILP maximal
+  - Pipeline 4-blocs simultanés : cagoule_ctr_encrypt_4x (C-layer)
+  - Format CGL1 v0x02 : |CT| == |PT| exact, pas de PKCS7
+  - Rétrocompatibilité : decrypt() dispatch automatique v0x01/v0x02
+  - encrypt() / decrypt() → CTR par défaut
+  - encrypt_cbc() / decrypt_cbc() → CBC explicite (v0x01)
+  - IV CTR dérivé de k_master (HKDF), non stocké dans le header
 
 Usage rapide :
     from cagoule import encrypt, decrypt
-    ct = encrypt(b"secret", b"password")
+
+    ct = encrypt(b"secret", b"password")   # CTR v0x02 par défaut
     pt = decrypt(ct, b"password")
+    assert pt == b"secret"
 
-API avancée (params pré-dérivés) :
-    from cagoule.params import CagouleParams
-    with CagouleParams.derive(b"password") as params:
-        ct = encrypt(b"msg", b"password", params=params)
-        pt = decrypt(ct, b"password", params=params)
+Bulk CTR :
+    from cagoule import encrypt_bulk, decrypt_bulk
 
-Inspection du backend :
-    from cagoule import __backend__, __omega_backend__, backend_info
-    print(__backend__)       # "C (libcagoule.so v2.3)" ou "Python pur (fallback v1.x)"
-    print(__omega_backend__) # "C (libcagoule.so v2.3)" ou "Python (mpmath fallback)"
-    print(backend_info)      # {"matrix_backend": "avx2", "sbox_backend": "avx2", "omega_backend": "C"}
+    cts = encrypt_bulk([b"msg1", b"msg2"], b"password")
+    pts = decrypt_bulk(cts, b"password")
+
+CBC explicite (rétrocompatibilité) :
+    from cagoule import encrypt_cbc, decrypt_cbc
+
+    ct_cbc = encrypt_cbc(b"secret", b"password")
+    pt_cbc = decrypt_cbc(ct_cbc, b"password")
+
+Migration CBC → CTR :
+    from cagoule import migrate_cbc_to_ctr
+
+    ct_ctr = migrate_cbc_to_ctr(ct_cbc, b"password")
 """
 
-from .__version__ import __version__, __version_info__, __release_date__
+from .__version__  import __version__, __release_date__, __author__
 
-# ── Exceptions ────────────────────────────────────────────────────────
-from .decipher import CagouleAuthError, CagouleFormatError, CagouleError
+# ── Imports internes ────────────────────────────────────────────────────
+from ._binding  import CAGOULE_C_AVAILABLE, get_backend_info
+from .cipher    import encrypt as _encrypt_cbc_raw
+from .decipher  import decrypt as _decrypt_cbc_raw
+from .cipher_ctr   import encrypt_ctr, encrypt_bulk_ctr
+from .decipher_ctr import decrypt_ctr, decrypt_bulk_ctr, _dispatch_decrypt
 
-# ── Classes principales ───────────────────────────────────────────────
-from .params import CagouleParams
+# ── API principale (CTR par défaut en v3.0.0) ──────────────────────────
 
-# ── Fonctions principales ──────────────────────────────────────────────
-from .cipher   import encrypt, encrypt_with_params, encrypt_bulk, decrypt_bulk
-from .decipher import decrypt, decrypt_with_params
+def encrypt(message: bytes, password: bytes, **kwargs) -> bytes:
+    """
+    Chiffrement CAGOULE — CTR mode (v3.0.0+).
 
-# ── Format ────────────────────────────────────────────────────────────
-from .format import parse, inspect, serialize, is_cgl1, OVERHEAD, MAGIC
+    Retourne un ciphertext CGL1 v0x02.
+    Utiliser encrypt_cbc() pour forcer le mode CBC (v0x01).
+    """
+    return encrypt_ctr(message, password, **kwargs)
 
-# ── Sécurité ──────────────────────────────────────────────────────────
-from .utils import (
-    secure_zeroize, SensitiveBuffer, bytes_to_zeroizable,
-    analyze_sbox, sbox_report,
-)
+def decrypt(ciphertext: bytes, password: bytes, **kwargs) -> bytes:
+    """
+    Déchiffrement CAGOULE — dispatch automatique par VERSION.
 
-# ── Logging ───────────────────────────────────────────────────────────
-from .logger import get_logger, set_level, enable_verbose, enable_debug
-
-# ── Backends ──────────────────────────────────────────────────────────
-from ._binding import CAGOULE_C_AVAILABLE as _C_AVAILABLE
-__backend__ = "C (libcagoule.so v2.5.0)" if _C_AVAILABLE else "Python pur (fallback v2.5.0)"
-
-# Backend info (v2.5.0)
-try:
-    from ._binding import get_backend_info_v230 as _get_backend_info
-    backend_info = _get_backend_info()
-except Exception:
-    backend_info = {"matrix_backend": "unknown", "sbox_backend": "unknown", "omega_backend": "unknown"}
+    VERSION 0x01 → CBC (rétrocompatibilité v2.x)
+    VERSION 0x02 → CTR (v3.0.0+)
+    """
+    return _dispatch_decrypt(ciphertext, password, **kwargs)
 
 
-# Backend spécifique omega (v2.2.0)
-try:
-    from .omega import OMEGA_BACKEND as __omega_backend__
-except Exception:
-    __omega_backend__ = "unknown"
+def encrypt_cbc(message: bytes, password: bytes, **kwargs) -> bytes:
+    """
+    Chiffrement CAGOULE en mode CBC — format CGL1 v0x01.
+
+    Conservé pour la rétrocompatibilité et les tests de parité.
+    Les nouvelles applications doivent utiliser encrypt() (CTR).
+    """
+    return _encrypt_cbc_raw(message, password, **kwargs)
+
+
+def decrypt_cbc(ciphertext: bytes, password: bytes, **kwargs) -> bytes:
+    """
+    Déchiffrement CAGOULE en mode CBC — ciphertexts CGL1 v0x01 uniquement.
+    """
+    return _decrypt_cbc_raw(ciphertext, password, **kwargs)
+
+
+def encrypt_bulk(messages: list, password: bytes, **kwargs) -> list:
+    """Bulk CTR : une dérivation Argon2id pour N messages."""
+    return encrypt_bulk_ctr(messages, password, **kwargs)
+
+
+def decrypt_bulk(ciphertexts: list, password: bytes, **kwargs) -> list:
+    """Déchiffrement bulk CTR."""
+    return decrypt_bulk_ctr(ciphertexts, password, **kwargs)
+
+
+def migrate_cbc_to_ctr(ciphertext_cbc: bytes, password: bytes,
+                        fast_mode: bool = False) -> bytes:
+    """
+    Migration d'un ciphertext CGL1 v0x01 (CBC) vers v0x02 (CTR).
+
+    Déchiffre avec CBC, rechiffre avec CTR.
+    Le plaintext intermédiaire est zéroïsé après usage.
+    """
+    # Déchiffrer CBC
+    plaintext = _decrypt_cbc_raw(ciphertext_cbc, password, fast_mode=fast_mode)
+    # Rechiffrer CTR
+    result = encrypt_ctr(plaintext, password, fast_mode=fast_mode)
+    # Zéroïser le plaintext intermédiaire
+    pt_ba = bytearray(plaintext)
+    for i in range(len(pt_ba)):
+        pt_ba[i] = 0
+    return result
+
+
+# ── Métadonnées backend ─────────────────────────────────────────────────
+
+backend_info = get_backend_info()
+__backend__  = "C (libcagoule.so v3.0.0)" if CAGOULE_C_AVAILABLE else "Python pur (fallback)"
+
 __all__ = [
-    # Version
-    "__version__",
-    "__version_info__",
-    "__release_date__",
-    "__backend__",
-    "__omega_backend__",
-    "backend_info",
-    # Exceptions
-    "CagouleError",
-    "CagouleAuthError",
-    "CagouleFormatError",
-    # Classes
-    "CagouleParams",
-    # Fonctions principales
-    "encrypt",
-    "decrypt",
-    "encrypt_with_params",
-    "decrypt_with_params",
-    "encrypt_bulk",
-    "decrypt_bulk",
-    # Format
-    "parse",
-    "inspect",
-    "serialize",
-    "is_cgl1",
-    "OVERHEAD",
-    "MAGIC",
-    # Sécurité
-    "secure_zeroize",
-    "SensitiveBuffer",
-    "analyze_sbox",
-    "sbox_report",
-    # Logging
-    "get_logger",
-    "set_level",
-    "enable_verbose",
-    "enable_debug",
+    "__version__", "__release_date__", "__author__",
+    "__backend__", "backend_info",
+    # API principale
+    "encrypt", "decrypt",
+    # CTR explicite
+    "encrypt_ctr", "decrypt_ctr",
+    "encrypt_bulk", "decrypt_bulk",
+    "encrypt_bulk_ctr", "decrypt_bulk_ctr",
+    # CBC explicite (rétrocompatibilité)
+    "encrypt_cbc", "decrypt_cbc",
+    # Migration
+    "migrate_cbc_to_ctr",
+    # Backend
+    "CAGOULE_C_AVAILABLE",
 ]
-
-__author__    = "Slim Issa"
-__copyright__ = "Copyright 2026, CAGOULE Project"
-__license__   = "MIT"

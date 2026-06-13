@@ -1,4 +1,4 @@
-# cagoule_bench.toml — Configuration cagoule-bench v2.5.0
+# cagoule_bench.toml — Configuration cagoule-bench v3.0.0
 #
 # P3 corrections v2.5.0 :
 #   - min_baseline_n = 5 : ignore les comparaisons si la baseline < 5 mesures
@@ -7,7 +7,7 @@
 #   - Suite parallel : iterations=20, warmup=5 pour stabilité statistique
 
 [bench]
-version         = "2.5.4"
+version         = "3.0.0"
 output_format   = "console"          # "console" | "json" | "csv"
 output_file     = ""                 # "" = stdout
 units           = "MB/s"
@@ -58,7 +58,15 @@ enabled     = true
 warmup      = 2
 iterations  = 10
 # Cibles : matrix_fwd, matrix_inv, sbox_fwd, sbox_inv, mulmod64
-components  = ["matrix_fwd", "matrix_inv", "sbox_fwd", "sbox_inv", "mulmod64"]
+components  = ["matrix_fwd", "matrix_inv", "sbox_fwd", "sbox_inv", "mulmod64", "ctr_keystream"]
+[suites.ctr]
+# v3.0.0: CTR mode benchmarks
+enabled     = true
+warmup      = 3
+iterations  = 20
+sizes_kb    = [1, 8, 64, 1024, 10240]
+# Compare CTR vs CBC
+algorithms  = ["cagoule-ctr", "cagoule-cbc"]
 
 [reporting]
 # Afficher uniquement les métriques > threshold_pct de variation

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-regenerate_kat.py — Régénération des vecteurs KAT — CAGOULE v2.5.1  
-
+regenerate_kat.py — Régénération des vecteurs KAT — CAGOULE v3.0.0  
 Usage :
     python3 regenerate_kat.py           # KAT chiffrement uniquement
     python3 regenerate_kat.py --omega   # + KAT omega
@@ -50,14 +49,14 @@ if os.path.exists(so_path):
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     from cagoule.params import CagouleParams
-    from cagoule.cipher import encrypt, encrypt_with_params
+    from cagoule.cipher import encrypt as encrypt_cbc, encrypt_with_params
     from cagoule._binding import CAGOULE_C_AVAILABLE
     from cagoule.omega import generate_round_keys, OMEGA_BACKEND
 
 
 def banner():
     print("═" * 60)
-    print("  regenerate_kat.py — CAGOULE v2.5.1")
+    print("  regenerate_kat.py — CAGOULE v3.0.0")
     print(f"  Backend chiffrement : {'C (libcagoule.so)' if CAGOULE_C_AVAILABLE else 'Python pur'}")
     print(f"  Backend omega       : {OMEGA_BACKEND}")
     print("═" * 60)
@@ -85,7 +84,7 @@ def regenerate_cipher_kat(params: CagouleParams) -> dict:
     print("\n── KAT chiffrement ──────────────────────────────────────")
 
     # Vecteur 1 : chiffrement complet
-    ct = encrypt(PLAINTEXT, PASSWORD_B, salt=SALT, params=params)
+    ct = encrypt_cbc(PLAINTEXT, PASSWORD_B, salt=SALT, params=params)
     print(f"  Plaintext  : {PLAINTEXT.decode()!r}")
     print(f"  CT (hex)   : {ct.hex()[:48]}…")
 
@@ -113,7 +112,7 @@ def regenerate_cipher_kat(params: CagouleParams) -> dict:
         ("42" * 64, "multi_block"),
     ]:
         msg = bytes.fromhex(msg_hex) if msg_hex else b""
-        ct_v = encrypt(msg, PASSWORD_B, salt=SALT, params=params)
+        ct_v = encrypt_cbc(msg, PASSWORD_B, salt=SALT, params=params)
         vectors.append({
             "label":      label,
             "plaintext":  msg_hex,
@@ -123,7 +122,7 @@ def regenerate_cipher_kat(params: CagouleParams) -> dict:
         print(f"  [{label:12s}] SHA256: {hashlib.sha256(ct_v).hexdigest()[:16]}…")
 
     return {
-        "version":      "2.5.0",
+        "version":      "3.0.0",
         "backend":      "C" if CAGOULE_C_AVAILABLE else "Python",
         "password":     PASSWORD,
         "salt":         SALT_HEX,
@@ -147,7 +146,7 @@ def regenerate_omega_kat() -> dict:
     print(f"  ✓ {OMEGA_NUM_KEYS} clés dans [0, p={OMEGA_P})")
 
     return {
-        "version":    "2.5.0",
+        "version":    "3.0.0",
         "backend":    OMEGA_BACKEND,
         "n":          OMEGA_N,
         "salt":       OMEGA_SALT_HEX,
@@ -162,7 +161,7 @@ def regenerate_omega_kat() -> dict:
 
 def main():
     global _nonce_counter
-    parser = argparse.ArgumentParser(description="Régénération KAT CAGOULE v2.5.1")
+    parser = argparse.ArgumentParser(description="Régénération KAT CAGOULE v3.0.0")
     parser.add_argument("--omega", action="store_true",
                         help="Régénère aussi les vecteurs KAT omega")
     parser.add_argument("--all", action="store_true",

@@ -1,87 +1,39 @@
-# ── Python ─────────────────────────────────────────────────────────────
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
 build/
-*.egg
-.eggs/
+.venv/
+venv/
 *.whl
 
-# Virtual environments
-venv/
-.venv/
-env/
+# C build artifacts
+*.o
+*.d
+*.so
+!cagoule/c/tests/
+!cagoule/c/fuzz/
 
-# ── C Build Artifacts ──────────────────────────────────────────────────
-cagoule/c/*.o
-cagoule/c/*.d
-cagoule/c/src/*.o
-cagoule/c/src/*.d
-cagoule/c/libcagoule.so
-cagoule/libcagoule.so
-cagoule/cagoule/libcagoule.so
-
-# C test binaries
-cagoule/c/test_math
-cagoule/c/test_matrix
-cagoule/c/test_sbox
-cagoule/c/test_cipher
-cagoule/c/test_omega
-cagoule/c/test_math_avx2
-cagoule/c/test_matrix_avx2
-cagoule/c/test_sbox_avx2
-cagoule/c/test_cipher_pipeline4
-cagoule/c/test_mersenne
-cagoule/c/test_py_call
-cagoule/c/test_cpuid*
-cagoule/c/test_call_cpuid
-cagoule/c/check_size
-
-# ── Testing & Coverage ─────────────────────────────────────────────────
-.pytest_cache/
-.coverage
-htmlcov/
-*.gcda
-*.gcno
-*.gcov
-
-# ── Benchmark Artifacts ────────────────────────────────────────────────
-benchmark_results/
-.cagoule_bench/
-cagoule-bench-v2/
-cagoule-bench-v2.0.0/
-
-# ── IDE & Editor ───────────────────────────────────────────────────────
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# ── OS Files ───────────────────────────────────────────────────────────
+# OS
 .DS_Store
 Thumbs.db
 
-# ── Temporary Files ────────────────────────────────────────────────────
-/tmp/*
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Valgrind logs
 *.log
-*.bak
-Makefile.bak
+/tmp/
 
-# ── Valgrind Logs ──────────────────────────────────────────────────────
-/tmp/valgrind_*.log
-
-# Old release folders
-cagoule v1.2/
-CAGOULE_v1.5.0_final/
-CAGOULE v2.0/
-CAGOULE_v2.1.0_source/
-CAGOULE_v2_2_0_source/
-CAGOULE_v2_3_0_clean/
-CAGOULE_v2_4_0_release/
-CAGOULE_v2_5_0_release/
-cagoule-clean/
+# Release archives
 *.zip
-
-benshmak_results.md
+*.tar.gz

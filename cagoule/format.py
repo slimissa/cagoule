@@ -8,6 +8,7 @@ from dataclasses import dataclass
 MAGIC           = b'CGL1'
 MAGIC_HEX       = 0x43474C31
 VERSION_BYTE    = 0x01
+VERSION_CTR = 0x02
 VERSION         = bytes([VERSION_BYTE])
 MAGIC_SIZE      = 4
 VERSION_SIZE    = 1
@@ -16,7 +17,7 @@ NONCE_SIZE      = 12
 TAG_SIZE        = 16
 HEADER_SIZE     = MAGIC_SIZE + VERSION_SIZE + SALT_SIZE + NONCE_SIZE   # 49
 OVERHEAD        = HEADER_SIZE + TAG_SIZE                                # 65
-SUPPORTED_VERSIONS = {0x01}
+SUPPORTED_VERSIONS = {0x01, 0x02}
 
 class CGL1FormatError(Exception):
     pass

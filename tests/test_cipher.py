@@ -11,6 +11,7 @@ Changements v2.1.0 :
 
 import os
 import sys
+from urllib import parse
 import warnings
 import time
 
@@ -202,13 +203,11 @@ class TestAuthError:
 class TestFormat:
 
     def test_format_cgl1(self, fast_params):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            from cagoule.cipher import encrypt
-            from cagoule.format import parse, is_cgl1, OVERHEAD, HEADER_SIZE, TAG_SIZE
-        ct = encrypt(b"test", TEST_PASSWORD, params=fast_params)
+        from cagoule.cipher import encrypt as encrypt_cbc
+        from cagoule.format import parse, is_cgl1, OVERHEAD, HEADER_SIZE, TAG_SIZE
+        ct = encrypt_cbc(b"test", TEST_PASSWORD, params=fast_params)
         assert ct[:4] == b"CGL1", "Magic invalide"
-        assert ct[4:5] == b"\x01", "Version invalide"
+        assert ct[4:5] == b"\x01", "Version CBC invalide"
         assert is_cgl1(ct)
         pkt = parse(ct)
         assert len(pkt.salt) == 32
@@ -403,7 +402,7 @@ class TestEncryptBulk:
 
     def test_wrong_password(self):
         """Mauvais mot de passe → CagouleAuthError."""
-        from cagoule import CagouleAuthError
+        from cagoule.decipher import CagouleAuthError
         cts = self.encrypt_bulk([b"secret"], b"correct", fast_mode=True)
         with pytest.raises(CagouleAuthError):
             self.decrypt_bulk(cts, b"wrong", fast_mode=True)
