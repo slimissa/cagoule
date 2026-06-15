@@ -30,6 +30,7 @@ CC       = gcc
 # -funroll-loops : déroulage explicite des boucles N=16 (4 iterations de 4)
 CFLAGS   = -O3 -funroll-loops -std=c99 -Wall -Wextra -fPIC -Iinclude
 CFLAGS  += -D_POSIX_C_SOURCE=200809L
+CFLAGS  += -Wno-aggressive-loop-optimizations
 LDFLAGS  = -shared
 LDLIBS   = -lm -lcrypto
 

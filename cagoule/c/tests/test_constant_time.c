@@ -1,6 +1,8 @@
 /**
  * test_constant_time.c — dudect-style constant-time validation
- *                         CAGOULE v2.5.4
+ *                         CAGOULE v3.0.0
+ *
+ * v3.0.0: Added CTR keystream generation constant-time test
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +13,11 @@
 
 #ifdef __AVX2__
 #include "cagoule_math_avx2.h"
+#include "cagoule_sbox_avx2.h"
+#include "cagoule_matrix.h"
+#include "cagoule_sbox.h"
+#include "cagoule_cipher.h"
+#include "cagoule_ctr.h"
 #include <immintrin.h>
 
 static int g_pass = 0, g_fail = 0;
@@ -108,6 +115,85 @@ static void test_barrett_ct(void) {
     }
 }
 
+/* ── v3.0.0: CTR keystream constant-time validation ───────────────── */
+__attribute__((noinline))
+static int _ct_ctr_keystream(const uint8_t iv[8], size_t start_bi,
+                              const CagouleMatrix* mat, const CagouleSBox64* sbox,
+                              const uint64_t* rk, size_t nk, uint64_t p,
+                              uint8_t* out, size_t n_blocks) {
+    return cagoule_ctr_keystream(iv, start_bi, mat, sbox, rk, nk, p, out, n_blocks);
+}
+
+static void test_ctr_keystream_ct(void) {
+    printf("  [3] CTR keystream generation (v3.0.0)...\n");
+    
+    extern const uint64_t CAGOULE_MERSENNE_P[8];
+    int N = 30000;
+    
+    volatile uint64_t w = 0;
+    for (int i = 0; i < 1000000; i++) w += i;
+    
+    for (int pi = 0; pi < 4; pi++) {  /* 4 primes for speed */
+        uint64_t p = CAGOULE_MERSENNE_P[pi];
+        
+        /* Build test matrix + sbox */
+        uint64_t nodes[16];
+        for (int i = 0; i < 16; i++)
+            nodes[i] = (uint64_t)(2 + i * 1000000007ULL + pi * 17ULL);
+        CagouleMatrix* mat = cagoule_matrix_build(nodes, 16, p);
+        if (!mat) { printf("    SKIP prime[%d] — build failed\n", pi); continue; }
+        
+        CagouleSBox64 sbox;
+        uint64_t rk0 = 0x123456789ABCDEF0ULL % 4294967291ULL;
+        uint64_t rk1 = 0xFEDCBA9876543210ULL % 4294967291ULL;
+        if (rk0 == 0) rk0 = 1;
+        if (rk1 == 0) rk1 = 1;
+        cagoule_sbox_init(&sbox, p, rk0, rk1);
+        
+        uint64_t rk[64];
+        for (int i = 0; i < 64; i++)
+            rk[i] = (uint64_t)((i + 1) * 0xABCDEF0123456789ULL) % p;
+        
+        /* Fixed IV */
+        uint8_t iv[8];
+        for (int i = 0; i < 8; i++)
+            iv[i] = (uint8_t)(0x30 + pi * 7 + i * 13);
+        
+        double *fa = malloc(N * sizeof(double));
+        double *fb = malloc(N * sizeof(double));
+        
+        /* Class A: fixed IV, fixed start_bi = 0, fixed n_blocks = 1 */
+        {
+            uint8_t ks[16];
+            for (int i = 0; i < N; i++) {
+                uint64_t t0 = rdtsc();
+                _ct_ctr_keystream(iv, 0, mat, &sbox, rk, 64, p, ks, 1);
+                fa[i] = (double)(rdtsc() - t0);
+                volatile uint8_t sink = ks[0]; (void)sink;
+            }
+        }
+        
+        /* Class B: random start_bi and random n_blocks (1..4) */
+        {
+            for (int i = 0; i < N; i++) {
+                size_t start_bi = (size_t)(rand() % 1000);
+                size_t n_blocks = (size_t)((rand() % 4) + 1);
+                uint8_t ks[64];  /* max 4 blocks = 64 bytes */
+                uint64_t t0 = rdtsc();
+                _ct_ctr_keystream(iv, start_bi, mat, &sbox, rk, 64, p, ks, n_blocks);
+                fb[i] = (double)(rdtsc() - t0);
+                volatile uint8_t sink = ks[0]; (void)sink;
+            }
+        }
+        
+        char nm[32];
+        snprintf(nm, sizeof(nm), "CTR keystream p[%d]", pi);
+        CHECK_CT(nm, t_test(fa, fb, N));
+        
+        free(fa); free(fb);
+        cagoule_matrix_free(mat);
+    }
+}
 
 /* Calibration: known constant-time (XOR) */
 static void test_calibrate_ct(void) {
@@ -139,18 +225,18 @@ static void test_calibrate_ct(void) {
 
 int main(void){
     printf("══════════════════════════════════════════════════\n");
-    printf("  test_constant_time — CAGOULE v2.5.4\n");
+    printf("  test_constant_time — CAGOULE v3.0.0\n");
     printf("══════════════════════════════════════════════════\n\n");
     srand(0xCAFEBABE);
     test_calibrate_ct();
     test_mersenne_ct();
     test_barrett_ct();
+    test_ctr_keystream_ct();
     printf("\n  ✅ %d constant-time  ❌ %d leaks\n",g_pass,g_fail);
     return g_fail==0?0:1;
 }
 #else
 
-/* Calibration: known constant-time (XOR) */
 static void test_calibrate_ct(void) {
     printf("  [0] Calibration...\n");
     int N = 50000;

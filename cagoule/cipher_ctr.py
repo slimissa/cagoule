@@ -415,41 +415,54 @@ def encrypt_ctr(message: bytes, password: bytes,
             params.zeroize()
 
 def encrypt_bulk_ctr(messages: list, password: bytes,
-                     fast_mode: bool = False) -> list:
-    
+                     fast_mode: bool = False,
+                     params: Optional[CagouleParams] = None) -> list:
     """
-    Chiffrement CTR bulk : une seule dérivation Argon2id pour N messages.
+    Chiffrement CTR bulk.
 
-    Amortissement KDF : 113ms une fois vs 113ms × N individuellement.
-    Chaque message reçoit un salt et nonce distincts — l'IV CTR est
-    re-dérivé de k_master (identique pour tous les messages du batch) mais
-    le salt différent dans chaque header garantit k_master distinct.
+    Si params= est fourni, k_master est partagé entre tous les messages
+    (vrai amortissement KDF — une seule dérivation Argon2id).
+    Chaque message reçoit un sel unique dans le header pour l'unicité
+    du keystream CTR.
 
-    Note : pour un amortissement complet, tous les messages partagent
-    k_master. Cela signifie que si deux messages ont le même salt (probabilité
-    négligeable avec os.urandom(32)), leur IV CTR est identique.
-    Pour le batch, on génère un salt unique par message mais on ne re-dérive
-    k_master qu'une seule fois avec le premier salt. Les autres messages
-    utilisent des nonces distincts et des plaintexts a priori différents.
+    Si params= est None, chaque message dérive ses propres paramètres
+    (sel unique → k_master unique). Compatible avec le comportement v3.0.0.
 
-    Usage recommandé : encrypt_bulk_ctr pour les petits messages (< 1KB)
-    où le coût KDF domine. Pour les grands messages, encrypt_ctr individuel.
+    Usage recommandé :
+        # Vrai amortissement (1 dérivation KDF pour N messages)
+        p = CagouleParams.derive(password, fast_mode=False)
+        cts = encrypt_bulk_ctr(messages, password, params=p)
+        p.zeroize()
+
+        # Mode indépendant (chaque message a son propre k_master)
+        cts = encrypt_bulk_ctr(messages, password)
     """
-
     if not messages:
         return []
 
+    own_params = params is None
     results = []
+
     for msg in messages:
         msg_salt = os.urandom(SALT_SIZE)
-        params = CagouleParams.derive(password, salt=msg_salt, fast_mode=fast_mode)
+
+        if own_params:
+            # Chaque message dérive ses propres paramètres (comportement v3.0.0)
+            msg_params = CagouleParams.derive(password, salt=msg_salt,
+                                               fast_mode=fast_mode)
+        else:
+            # Paramètres partagés — un sel unique par message dans le header
+            msg_params = params
+
         try:
-            ct_alg = _ctr_encrypt(bytes(msg), params)
+            ct_alg = _ctr_encrypt(bytes(msg), msg_params)
             nonce = os.urandom(NONCE_SIZE)
             aad = _build_cgl1_v2(msg_salt)
-            chacha = ChaCha20Poly1305(params.k_stream)
+            chacha = ChaCha20Poly1305(msg_params.k_stream)
             ct_aead = chacha.encrypt(nonce, ct_alg, aad)
             results.append(MAGIC + VERSION_CTR + msg_salt + nonce + ct_aead)
         finally:
-            params.zeroize()
+            if own_params:
+                msg_params.zeroize()
+
     return results
