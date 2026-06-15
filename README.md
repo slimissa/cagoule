@@ -1,171 +1,90 @@
-# CAGOULE v2.5.4
+# CAGOULE v3.0.0
 
 **Cryptographie Algébrique Géométrique par Ondes et Logique Entrelacée**
 
-[![Version](https://img.shields.io/badge/version-2.5.4-blue)](https://github.com/slimissa/cagoule)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue)](https://github.com/slimissa/CAGOULE)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12+-blue)](https://www.python.org)
-[![Platform](https://img.shields.io/badge/platform-x86__64%20%7C%20AMD64%20%7C%20ARM64-lightgrey)](https://github.com/slimissa/cagoule)
-[![C Tests](https://img.shields.io/badge/C%20tests-4,088,031%20passed-brightgreen)](https://github.com/slimissa/cagoule)
-[![Python Tests](https://img.shields.io/badge/Python%20tests-578%20passed-brightgreen)](https://github.com/slimissa/cagoule)
-[![CI](https://img.shields.io/badge/CI-multi--arch%20(x86__64%20%2B%20ARM64)-blue)](https://github.com/slimissa/cagoule/actions)
+[![Platform](https://img.shields.io/badge/platform-x86__64%20Linux-lightgrey)](https://github.com/slimissa/CAGOULE)
+[![C Tests](https://img.shields.io/badge/C%20tests-4%2C088%2C123%2B-brightgreen)](https://github.com/slimissa/CAGOULE)
+[![Python Tests](https://img.shields.io/badge/Python%20tests-578%2B-brightgreen)](https://github.com/slimissa/CAGOULE)
 
 ---
 
-CAGOULE is a symmetric hybrid encryption system combining ChaCha20-Poly1305, Argon2id, HKDF-SHA256 with a custom algebraic diffusion layer (Vandermonde over Z/pZ, 2-round Feistel S-box, ζ(2n)-derived round keys). The C backend is fully AVX2-vectorised.
-
-**Platform Support**: Intel x86-64 ✅ · AMD Ryzen/EPYC ✅ · ARM64 (QEMU) ✅ · Apple Silicon ✅
+CAGOULE is a symmetric hybrid encryption system combining ChaCha20-Poly1305, Argon2id, HKDF-SHA256 with a custom algebraic diffusion layer (Vandermonde over Z/pZ, 2-round Feistel S-box, ζ(2n)-derived round keys). The C backend is fully AVX2-vectorised with Mersenne-64 prime pool.
 
 ---
 
-## What's New in v2.5.4
+## What's New in v3.0.0
 
-v2.5.7 is the culmination of the v2.5.x **Mersenne Acceleration** cycle, adding security hardening, fuzz testing, threat modeling, and multi-arch CI to the core v2.5.0 performance improvements.
+v3.0.0 is the **CTR Mode** release. The v2.5.x cycle completed the AVX2 C-layer (10.8 MB/s). The bottleneck shifted to the CBC mode itself: each block depends on the previous one, preventing any inter-block parallelism. CTR eliminates this constraint.
 
-### Core v2.5.0 Features
+### Delivered
 
 | Feature | Status |
 |---|---|
-| **P0** — Mersenne-64 prime pool (8 primes, HKDF-selected) | ✅ |
-| **P0** — `mulmod_mersenne64x4` AVX2 (13 instructions vs 22 Barrett) | ✅ |
-| **P1** — Option A dual accumulator (even/odd split, depth 8 vs 16) | ✅ |
-| **P2** — Z-Domain Shifting in C-layer (+32% Python e2e) | ✅ |
-| **P3** — `encrypt_bulk()` / `decrypt_bulk()` — single Argon2id derivation | ✅ |
-| **P4** — Thread-local buffer pool (+71% single-core parallel) | ✅ |
-| GIL release on heavy C calls | ✅ |
-| `test_mersenne.c` — 4,000,032 assertions across all 8 primes | ✅ |
-| ARCHITECTURE.md — complete data-flow diagram and design decisions | ✅ |
+| **cagoule_ctr.c** — CTR keystream pipeline (scalar + AVX2 4x) | ✅ |
+| **cagoule_ctr_encrypt_4x** — 4 independent keystreams simultaneously | ✅ |
+| **Format CGL1 v0x02** — `|CT| == |PT|`, no PKCS7 | ✅ |
+| **VERSION dispatch** — decrypt() auto-routes v0x01/v0x02 | ✅ |
+| **cipher_ctr.py** — Python CTR layer (C backend + fallback) | ✅ |
+| **decipher_ctr.py** — Decrypt CTR + dispatch | ✅ |
+| **migrate_cbc_to_ctr()** — Migration utility | ✅ |
+| **test_ctr.c** — 350K+ assertions (keystream, roundtrip, 4x parity, all 8 primes) | ✅ |
+| **encrypt() default → CTR** — API change from v2.5.x | ✅ |
+| **encrypt_cbc() / decrypt_cbc()** — CBC still available explicitly | ✅ |
 
-### v2.5.1–v2.5.3: Stability & Coverage
+### API Changes from v2.5.x
 
-| Feature | Version |
-|---|---|
-| AVX2 runtime detection fix (`/proc/cpuinfo`, 4096-byte buffer) | v2.5.1 |
-| Z-Domain Shifting tests in `test_cipher.c` (10 assertions) | v2.5.1 |
-| Mersenne pool lookup tests in `test_math.c` (30 assertions) | v2.5.1 |
-| Mersenne AVX2 parity tests in `test_math_avx2.c` (+16,544 assertions) | v2.5.2 |
-| Mersenne matrix parity tests in `test_matrix_avx2.c` (+27,656 assertions) | v2.5.2 |
-| Z-Domain pipeline4 tests in `test_cipher_pipeline4.c` (+21 assertions) | v2.5.2 |
-| Zero round-key + Mersenne S-box tests in `test_sbox.c` (+20 assertions) | v2.5.2 |
-| Mersenne pool roundtrip tests in `test_matrix.c` (+33 assertions) | v2.5.2 |
-| Z-Domain doc fix, version strings, Mersenne benchmark suite | v2.5.3 |
+```python
+# v3.0.0: encrypt() defaults to CTR (CGL1 v0x02)
+from cagoule import encrypt, decrypt
 
-### v2.5.4: Security Hardening
+ct = encrypt(b"secret", b"password")   # CTR — |ct| close to |pt|
+pt = decrypt(ct, b"password")          # auto-dispatches v0x01 / v0x02
 
-| Priority | Feature |
-|----------|---------|
-| **P0** | Z-Domain inline — no malloc in encrypt hot path |
-| **P1** | dudect constant-time empirical validation |
-| **P2** | libFuzzer harness — 500K clean runs, 0 crashes |
-| **P3** | SECURITY.md — complete threat model and security policy |
-| **P4** | CI multi-arch matrix (x86_64 native + ARM64 QEMU) |
+# CBC still available explicitly
+from cagoule import encrypt_cbc, decrypt_cbc
+ct_cbc = encrypt_cbc(b"secret", b"password")   # CGL1 v0x01
 
----
+# Migration
+from cagoule import migrate_cbc_to_ctr
+ct_ctr = migrate_cbc_to_ctr(ct_cbc, b"password")
+```
 
-## Performance
+### Performance (projected — C-layer)
 
-### Python API (cagoule-bench v2.0.0, 30 iterations)
-
-| Test | v2.4.0 | v2.5.x | Improvement |
-|------|--------|--------|-------------|
-| encrypt-1KB | 5.8 MB/s | **7.1 MB/s** | **+22%** |
-| encrypt-8KB | — | **8.1 MB/s** | — |
-| encrypt-1MB | 5.2 MB/s | **6.9 MB/s** | **+33%** |
-| encrypt-10MB | 5.1 MB/s | **6.8 MB/s** | **+33%** |
-| decrypt-1MB | 4.6 MB/s | **6.0 MB/s** | **+30%** |
-| decrypt-10MB | 8.5 MB/s | **14.4 MB/s** | **+69%** |
-
-### C Layer (65,536 blocks ≡ 1 MB)
-
-| Metric | v2.4.0 | v2.5.x |
-|--------|--------|--------|
-| C encrypt | 8.0 MB/s | **10.8 MB/s** |
-| C decrypt | 8.1 MB/s | **10.8 MB/s** |
-| Ratio dec/enc | 0.99× | **1.00×** |
-| Matrix forward | ~1400 ns/bloc | **47 ms total** |
-| S-box AVX2 | 70.1 MB/s | **87.9 MB/s** |
-
-### Parallel Scaling (encrypt_bulk + ProcessPoolExecutor)
-
-| Workers | Throughput | Speedup | Efficiency |
-|---------|------------|---------|------------|
-| 1 | ~3.8 MB/s | 1.00× | — |
-| 2 | **8.1 MB/s** | 2.15× | 107% |
-| 4 | **14.4 MB/s** | 3.81× | 95% |
-| 8 | **23.7 MB/s** | 6.26× | 78% |
-| 16 | **29.2 MB/s** | 7.72× | 48% |
-
-### Streaming (64 KB chunks)
-
-| Size | CAGOULE | AES-256-GCM | ChaCha20-Poly1305 |
-|------|---------|-------------|-------------------|
-| 50 MB | **7.9 MB/s** | 456 MB/s | 403 MB/s |
-| 100 MB | **7.9 MB/s** | 457 MB/s | 402 MB/s |
-| 500 MB | **7.8 MB/s** | 458 MB/s | 403 MB/s |
-
-### KDF (Argon2id)
-
-| Configuration | Latency | OWASP |
-|---------------|---------|-------|
-| t=3, m=64MB, p=1 | 113.7 ms | ✅ Production |
-| t=3, m=64MB, p=4 | 51.4 ms | ✅ Multi-core |
-| t=5, m=128MB, p=4 | 152.2 ms | ✅ High security |
-
----
-
-## Platform Support
-
-| Platform | SIMD | Status | CI Validated |
-|----------|------|--------|--------------|
-| **Intel x86-64** | AVX2 | ✅ Full acceleration | ✅ GitHub Actions |
-| **AMD Ryzen/EPYC** | AVX2 (Zen 2+) | ✅ Full acceleration | ⚠️ Same arch, not separately tested |
-| **ARM64 (Apple M1-M3)** | NEON (future) | ✅ Scalar fallback | ✅ QEMU in CI |
-| **ARM64 (AWS Graviton)** | NEON (future) | ✅ Scalar fallback | ✅ QEMU in CI |
-| **ARM64 (Raspberry Pi 5)** | NEON (future) | ✅ Scalar fallback | ✅ QEMU in CI |
+| Metric | v2.5.x (CBC) | v3.0.0 (CTR) | Mechanism |
+|--------|-------------|-------------|-----------|
+| C encrypt 1MB | 10.8 MB/s | **>25 MB/s** | No inter-block dependency |
+| Python e2e 1MB | 6.9 MB/s | **>15 MB/s** | CTR × 4-block pipeline |
+| Parallel 20 cores | ~40 MB/s | **>80 MB/s** | CTR × ProcessPool |
 
 ---
 
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the complete data-flow diagram and design decisions.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for data-flow diagrams and design decisions.
 
-### Mersenne-64 Prime Pool (v2.5.0)
+### CGL1 Format Versions
 
-| Prime | k | p = 2^64 − k |
-|-------|---|--------------|
-| P_M59 | 59 | 18446744073709551557 |
-| P_M83 | 83 | 18446744073709551533 |
-| P_M95 | 95 | 18446744073709551521 |
-| P_M179 | 179 | 18446744073709551437 |
-| P_M189 | 189 | 18446744073709551427 |
-| P_M257 | 257 | 18446744073709551359 |
-| P_M279 | 279 | 18446744073709551337 |
-| P_M323 | 323 | 18446744073709551293 |
+| VERSION | Mode | CT size | PKCS7 | Since |
+|---------|------|---------|-------|-------|
+| `0x01` | CBC | `ceil(|PT|/16) × 16 × p_bytes` | Yes | v2.0.0 |
+| `0x02` | CTR | `|PT|` exact | **No** | v3.0.0 |
 
-- **Selection**: `HKDF(k_master, "CAGOULE_PRIME_SEL_V25")[0] % 8`
-- **Advantage**: `a×b mod p = hi×k + lo` — 13 instructions vs 22 for Barrett
-- **Option A**: Dual accumulator (even/odd split) reduces dependency chain from depth 16 to 8
+### CTR Pipeline
 
-### Z-Domain Shifting (v2.5.0, inline since v2.5.4)
+```
+IV = HKDF(k_master, "CAGOULE_CTR_V30", 8)
 
-- **Operation**: `byte[i] = (byte[i] + z_offset[i%16]) % 256` (applied inline in C-layer)
-- **Derivation**: `z_offset = HKDF(k_master, "CAGOULE_Z_SHIFT_V25", 128) % p`
-- **Security**: Prevents DDT precomputation attacks on the algebraic layer
-- **Performance**: Zero allocation — applied per-block during load (v2.5.4)
+For block bi:
+  counter_block = [IV[0..7], bi[0..7]]  ← 16 bytes, 1 byte per uint64
+  keystream_bi  = sbox(matrix(counter_block) + rk[bi%nk]) & 0xFF  [16 bytes]
+  ct[bi*16 + j] = (pt[bi*16+j] + zo_byte[j]) ^ keystream_bi[j]
+```
 
----
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for the complete threat model, known limitations, side-channel considerations, and vulnerability reporting process.
-
-| Validation | Result |
-|-----------|--------|
-| **Constant-time C layer** | ✅ Empirically validated (dudect) |
-| **Fuzz testing** | ✅ 500K iterations, 0 crashes (libFuzzer + ASAN/UBSAN) |
-| **Memory safety** | ✅ Valgrind clean — 0 errors, 0 leaks across all 7 test binaries |
-| **C test assertions** | ✅ 4,088,031 passed, 0 failed |
-| **Python tests** | ✅ 578 passed, 0 failed, 20 skipped |
+4 independent keystreams computed simultaneously (ILP) in `cagoule_ctr_encrypt_4x`.
 
 ---
 
@@ -179,24 +98,15 @@ pt = decrypt(ct, b"my_password")
 assert pt == b"my secret data"
 ```
 
-### Bulk Encryption (v2.4.0+)
+### Bulk Encryption
 
 ```python
 from cagoule import encrypt_bulk, decrypt_bulk
 
 messages = [b"alpha", b"beta", b"gamma"]
-cts = encrypt_bulk(messages, b"my_password")
+cts = encrypt_bulk(messages, b"my_password")  # single Argon2id derivation
 pts = decrypt_bulk(cts, b"my_password")
 assert pts == messages
-```
-
-### Backend Inspection
-
-```python
-from cagoule import __version__, backend_info
-
-print(__version__)          # "2.5.5"
-print(backend_info)         # {'matrix_backend': 'avx2', 'omega_backend': 'C', 'sbox_backend': 'avx2'}
 ```
 
 ---
@@ -205,113 +115,74 @@ print(backend_info)         # {'matrix_backend': 'avx2', 'omega_backend': 'C', '
 
 ```bash
 cd cagoule/c
-make clean && make && make tests  # builds + runs all 10 C test binaries
-make valgrind                     # memory leak detection (7 binaries)
-make install                      # copies libcagoule.so to Python package
-make fuzz                         # libFuzzer harness (requires clang)
+make clean && make && make tests
+make test-ctr          # CTR-specific suite
+make install
 pip install -e ".[dev]"
-pytest tests/ -v                  # 578 Python tests
+pytest tests/ -v
 ```
 
-### C Tests — 4,088,031 assertions, 0 failed
+### C Tests
 
 | Binary | Assertions | Coverage |
 |---|---|---|
-| `test_mersenne` | **4,000,032** | Mersenne-64 pool: 500K parity per prime |
-| `test_math` | **147** | mulmod64, addmod64, submod64, powmod64, invmod64, Mersenne pool lookup |
-| `test_sbox` | **47** | Feistel bijectivity, roundtrip, fallback x^d, zero-rk, Mersenne S-box |
-| `test_matrix` | **52** | Vandermonde P×P⁻¹=I, Cauchy fallback, Mersenne pool roundtrip |
-| `test_cipher` | **38** | CBC roundtrip, PKCS7, diffusion, Z-Domain Shifting, pipeline4, 1MB bench |
-| `test_omega` | 154 | ζ(2n), HKDF round keys, OpenSSL, thread-safety |
-| `test_math_avx2` | **33,033** | mulmod64x4/addmod64x4/submod64x4 parity, Mersenne parity + edge cases |
-| `test_matrix_avx2` | **31,917** | AVX2 Vandermonde parity, Mersenne pool parity + roundtrip |
-| `test_sbox_avx2` | 22,503 | AVX2 Feistel parity (400K cases), edge, bench |
-| `test_cipher_pipeline4` | **109** | Pipeline4 edge cases, residual regression, Z-Domain + pipeline4, 10K parity |
-
-### Python Tests — 578 passed, 0 failed, 20 skipped
-
-### Valgrind — 0 memory leaks across all 7 test binaries
-
-### libFuzzer — 500,000 iterations, 0 crashes (v2.5.5)
-
----
-
-## Documentation
-
-| Document | Content |
-|----------|---------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Data-flow diagram, Mersenne pool, design decisions |
-| [SECURITY.md](SECURITY.md) | Threat model, constant-time validation, known limitations, vulnerability reporting |
-
----
-
-## Roadmap
-
-### v2.5.x Backlog
-
-- Las_shell primitives: `cgl encrypt`, `cgl decrypt`, `cgl bench`, `cgl info`
-- PyPI `manylinux` wheel
-- Formal algebraic specification + IACR ePrint submission
-- `cagoule-pass` v2.0.0 with `Lass_shell vault` command
-
-### v3.0.0
-
-- CTR mode + multi-block SIMD (>30 MB/s single-core target)
-- ARM NEON backend for native Apple Silicon / Graviton acceleration
-- Production dudect (isolated CPU, 1M+ measurements, Bonferroni correction)
+| `test_mersenne` | 4,000,032 | Mersenne-64 pool: 500K parity per prime |
+| `test_ctr` | **350K+** | Keystream, roundtrip, 4x parity, 8 primes, Z-domain |
+| `test_math_avx2` | 16,553 | Mersenne + Barrett parity |
+| `test_matrix_avx2` | 27,778 | Mersenne matrix parity + roundtrip |
+| `test_sbox_avx2` | 22,503 | Feistel AVX2 parity |
+| `test_constant_time` | 8 | dudect Mersenne + Barrett |
+| *(+ 6 others)* | ~21,249 | math, cipher, matrix, sbox, omega, pipeline4 |
 
 ---
 
 ## Changelog
 
+### v3.0.0 — 2026-05-28
+
+**C Backend**
+- New: `cagoule_ctr.c` — CTR keystream pipeline (scalar + AVX2)
+- New: `cagoule_ctr_encrypt` / `cagoule_ctr_decrypt` — symmetric CTR API
+- New: `cagoule_ctr_encrypt_4x` — 4-block simultaneous keystream
+- New: `cagoule_ctr_keystream` — raw keystream generation
+- New: `cagoule_ctr.h` — full documented header
+- New: `test_ctr.c` — 350K+ assertions (10 suites)
+
+**Python Layer**
+- New: `cipher_ctr.py` — CTR encrypt layer (C backend + Python fallback)
+- New: `decipher_ctr.py` — CTR decrypt + CGL1 VERSION dispatch
+- Changed: `encrypt()` now defaults to CTR (CGL1 v0x02)
+- Changed: `decrypt()` auto-dispatches v0x01/v0x02 by VERSION field
+- New: `encrypt_cbc()` / `decrypt_cbc()` — explicit CBC API
+- New: `migrate_cbc_to_ctr()` — migration utility
+- New: `encrypt_bulk()` / `decrypt_bulk()` — bulk CTR
+- Updated: `__version__` → 3.0.0
+
+**Format**
+- New: CGL1 v0x02 — CTR format, no PKCS7, `|CT| == |PT|`
+- Backward compatible: v0x01 (CBC) still fully supported
+
 ### v2.5.4 — 2026-05-26
-- **P0**: Z-Domain inline — eliminated malloc in encrypt hot path
-- **P1**: dudect constant-time empirical validation
-- **P2**: libFuzzer harness — 500K iterations, 0 crashes, 0 memory leaks
-- **P3**: SECURITY.md — complete threat model and security policy
-- **P4**: CI multi-arch matrix (x86_64 native + ARM64 via QEMU)
+Z-Domain malloc eliminated, dudect CT validation, libFuzzer harness, CI ARM64.
 
-### v2.5.3 — 2026-05-26
-- Z-Domain doc fix in `cagoule_cipher.h`
-- Version string fixes in `cagoule_math_avx2.h`
-- Mersenne benchmark suite in `cagoule_bench.toml`
+### v2.5.3 — 2026-05-24
+Documentation fixes (cagoule_cipher.h, math_avx2.h, bench.toml + mersenne suite).
 
-### v2.5.2 — 2026-05-26
-- +44,281 test assertions across all suites
-- Mersenne AVX2 parity, Mersenne matrix parity, Z-Domain pipeline4 tests
-- Zero round-key + Mersenne S-box tests, Mersenne pool roundtrip tests
+### v2.5.2 — 2026-05-23
++44,405 assertions: Mersenne AVX2, matrix parity, pipeline4 z_offset, sbox.
 
-### v2.5.1 — 2026-05-26
-- AVX2 runtime detection fix (`/proc/cpuinfo` with 4096-byte buffer)
-- Z-Domain Shifting tests in `test_cipher.c`
-- Mersenne pool lookup tests in `test_math.c`
+### v2.5.1 — 2026-05-21
+AVX2 detection fix (__builtin_cpu_supports), Z-domain + Mersenne tests.
 
-### v2.5.0 — 2026-05-25
-- Mersenne-64 prime pool (8 primes, HKDF selection)
-- `mulmod_mersenne64x4` AVX2 (~13 instructions vs Barrett ~22)
-- Option A dual accumulator (even/odd split, depth 8 vs 16)
-- Z-Domain Shifting in C-layer (byte-level whitening)
-- `test_mersenne.c` — 4,000,032 assertions across all 8 primes
-- ARCHITECTURE.md — complete data-flow diagram and design decisions
-
-### v2.4.0 — 2026-05-16
-Pipeline4 decrypt, encrypt_bulk API, thread-local buffer pool, GIL release.
-
-### v2.3.0 — 2026-05-08
-S-box AVX2 vectorisation; Mersenne-like reduction; cycle-walking AVX2.
-
-### v2.2.0 — 2026-05-06
-AVX2 Vandermonde matrix multiply (+67% algebraic layer).
-
-### v2.1.0 — 2026-05-01
-C port of omega.c; security fix for wrong-password detection.
+### v2.5.0 — 2026-05-18
+Mersenne-64 pool, mulmod_mersenne64x4, Option A dual accumulator, Z-Domain Shifting, encrypt_bulk, buffer pool.
 
 ---
 
 ## Author
 
 **Slim Issa** — Kairouan, Tunisia
-[github.com/slimissa/cagoule](https://github.com/slimissa/cagoule)
+[github.com/slimissa/CAGOULE](https://github.com/slimissa/CAGOULE)
 
 Part of the [QuantOS](https://github.com/slimissa/LAS_Shell) platform.
 
@@ -320,4 +191,3 @@ Part of the [QuantOS](https://github.com/slimissa/LAS_Shell) platform.
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
