@@ -3,6 +3,7 @@
  *                         CAGOULE v3.0.0
  *
  * v3.0.0: Added CTR keystream generation constant-time test
+ *         Batched rdtsc measurements for Mersenne/Barrett to reduce noise
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +20,9 @@
 #include "cagoule_cipher.h"
 #include "cagoule_ctr.h"
 #include <immintrin.h>
+
+/* ── Batch size for fast primitives (Mersenne/Barrett) ───────────── */
+#define DUDECT_BATCH 100
 
 static int g_pass = 0, g_fail = 0;
 #define CHECK_CT(name, tval) do { \
@@ -59,7 +63,7 @@ static __m256i _ct_mulmod_barrett(__m256i a, __m256i b, __m256i p, uint64_t mu) 
 }
 
 static void test_mersenne_ct(void) {
-    printf("  [1] mulmod_mersenne64x4...\n");
+    printf("  [1] mulmod_mersenne64x4 (batched ×%d)...\n", DUDECT_BATCH);
     extern const uint64_t CAGOULE_MERSENNE_P[8];
     extern const uint64_t CAGOULE_MERSENNE_K[8];
     int N = 50000;
@@ -78,8 +82,10 @@ static void test_mersenne_ct(void) {
         __m256i bf = _mm256_set1_epi64x((int64_t)(p/3));
         for (int i = 0; i < N; i++) {
             uint64_t t0 = rdtsc();
-            __m256i r = _ct_mulmod_mersenne(af, bf, pv, kv);
-            fa[i] = (double)(rdtsc() - t0);
+            __m256i r;
+            for (int b = 0; b < DUDECT_BATCH; b++)
+                r = _ct_mulmod_mersenne(af, bf, pv, kv);
+            fa[i] = (double)(rdtsc() - t0) / DUDECT_BATCH;
             volatile uint64_t s; _mm256_storeu_si256((__m256i*)&s, r);
         }
         for (int i = 0; i < N; i++) {
@@ -87,8 +93,10 @@ static void test_mersenne_ct(void) {
             __m256i ar = _mm256_set1_epi64x((int64_t)(ra%p));
             __m256i br = _mm256_set1_epi64x((int64_t)(rb%p));
             uint64_t t0 = rdtsc();
-            __m256i r = _ct_mulmod_mersenne(ar, br, pv, kv);
-            fb[i] = (double)(rdtsc() - t0);
+            __m256i r;
+            for (int b = 0; b < DUDECT_BATCH; b++)
+                r = _ct_mulmod_mersenne(ar, br, pv, kv);
+            fb[i] = (double)(rdtsc() - t0) / DUDECT_BATCH;
             volatile uint64_t s; _mm256_storeu_si256((__m256i*)&s, r);
         }
         char nm[32]; snprintf(nm,sizeof(nm),"mersenne k=%llu",(unsigned long long)k);
@@ -98,7 +106,7 @@ static void test_mersenne_ct(void) {
 }
 
 static void test_barrett_ct(void) {
-    printf("  [2] mulmod64x4 Barrett...\n");
+    printf("  [2] mulmod64x4 Barrett (batched ×%d)...\n", DUDECT_BATCH);
     uint64_t pr[4]={10441487724840939323ULL,14927237621619697897ULL,18446744073709551557ULL,9223372036854775837ULL};
     int N=30000;
     for(int pi=0;pi<4;pi++){
@@ -107,8 +115,24 @@ static void test_barrett_ct(void) {
         uint64_t mu=cagoule_barrett_mu(p);
         double*fa=malloc(N*sizeof(double)),*fb=malloc(N*sizeof(double));
         __m256i af=_mm256_set1_epi64x((int64_t)(p/2)),bf=_mm256_set1_epi64x((int64_t)(p/3));
-        for(int i=0;i<N;i++){uint64_t t0=rdtsc();__m256i r=_ct_mulmod_barrett(af,bf,pv,mu);fa[i]=(double)(rdtsc()-t0);volatile uint64_t s;_mm256_storeu_si256((__m256i*)&s,r);}
-        for(int i=0;i<N;i++){uint64_t ra=((uint64_t)rand()<<32)|rand(),rb=((uint64_t)rand()<<32)|rand();__m256i ar=_mm256_set1_epi64x((int64_t)(ra%p)),br=_mm256_set1_epi64x((int64_t)(rb%p));uint64_t t0=rdtsc();__m256i r=_ct_mulmod_barrett(ar,br,pv,mu);fb[i]=(double)(rdtsc()-t0);volatile uint64_t s;_mm256_storeu_si256((__m256i*)&s,r);}
+        for(int i=0;i<N;i++){
+            uint64_t t0=rdtsc();
+            __m256i r;
+            for(int b=0;b<DUDECT_BATCH;b++)
+                r=_ct_mulmod_barrett(af,bf,pv,mu);
+            fa[i]=(double)(rdtsc()-t0)/DUDECT_BATCH;
+            volatile uint64_t s;_mm256_storeu_si256((__m256i*)&s,r);
+        }
+        for(int i=0;i<N;i++){
+            uint64_t ra=((uint64_t)rand()<<32)|rand(),rb=((uint64_t)rand()<<32)|rand();
+            __m256i ar=_mm256_set1_epi64x((int64_t)(ra%p)),br=_mm256_set1_epi64x((int64_t)(rb%p));
+            uint64_t t0=rdtsc();
+            __m256i r;
+            for(int b=0;b<DUDECT_BATCH;b++)
+                r=_ct_mulmod_barrett(ar,br,pv,mu);
+            fb[i]=(double)(rdtsc()-t0)/DUDECT_BATCH;
+            volatile uint64_t s;_mm256_storeu_si256((__m256i*)&s,r);
+        }
         char nm[32];snprintf(nm,sizeof(nm),"barrett p[%d]",pi);
         CHECK_CT(nm,t_test(fa,fb,N));
         free(fa);free(fb);
