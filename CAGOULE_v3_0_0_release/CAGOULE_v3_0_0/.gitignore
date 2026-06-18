@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+*.whl
+
+# C build artifacts
+*.o
+*.d
+*.so
+cagoule/c/test_*
+cagoule/c/fuzz_cipher
+!cagoule/c/tests/
+!cagoule/c/fuzz/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+/tmp/
+
+# Valgrind logs
+*.log
+
+# Release archives
+*.zip
+*.tar.gz

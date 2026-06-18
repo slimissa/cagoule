@@ -1,18 +1,168 @@
-(venv) slim@slim:~/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench$ cagoule-bench run --suite encryption --iterations 20 --warmup 3 --format console
-  → Config chargée depuis : /home/slim/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench/cagoule_bench.toml
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ cagoule-bench run --suite ctr --iterations 10 --warmup 1 --format console
+  → Config chargée depuis : /home/slim/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2/cagoule_bench.toml
 
 ────────────────────────────────────────────────────────────── cagoule-bench v2.0.0 ──────────────────────────────────────────────────────────────
-  Platform: x86_64  Python: 3.12.3  CAGOULE: 2.5.0  matrix: scalar  omega: C
-  Suites: encryption  Iterations: 20  Warmup: 3  Tag: default
+  Platform: x86_64  Python: 3.12.3  CAGOULE: 3.0.0  matrix: avx2  omega: C
+  Suites: ctr  Iterations: 10  Warmup: 1  Tag: default
 
-  ✓ encryption — 30 benchmarks
+  ✓ ctr — 41 benchmarks
 
-──────────────────────────────────────────────────────── Terminé en 125.3s — 30 résultats ────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────── Terminé en 718.3s — 41 résultats ────────────────────────────────────────────────────────
 
 
 ╭───────────────────────────────────────────────────────────── CAGOULE-BENCH v2.0.0 ─────────────────────────────────────────────────────────────╮
-│ cagoule-bench v2.0.0  |  x86_64  |  3.12.3  |  matrix: scalar  omega: C  |  2026-05-25 15:16 UTC                                               │
+│ cagoule-bench v2.0.0  |  x86_64  |  3.12.3  |  matrix: ?  omega: ?  |  2026-06-14 15:47 UTC                                                    │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CTR SUITE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╭────────────────────────┬──────────────────────────┬───────────┬────────────╮
+│ Name                   │ Algorithm                │ Mean (ms) │ Throughput │
+├────────────────────────┼──────────────────────────┼───────────┼────────────┤
+│ ctr-encrypt-1KB        │ CAGOULE-CTR              │     0.067 │  14.6 MB/s │
+│ cbc-encrypt-1KB        │ CAGOULE-CBC              │     0.319 │   3.1 MB/s │
+│ ctr-decrypt-1KB        │ CAGOULE-CTR              │     0.185 │   5.3 MB/s │
+│ cbc-decrypt-1KB        │ CAGOULE-CBC              │   118.634 │   0.0 MB/s │
+│ ctr-encrypt-8KB        │ CAGOULE-CTR              │     0.373 │  20.9 MB/s │
+│ cbc-encrypt-8KB        │ CAGOULE-CBC              │     1.000 │   7.8 MB/s │
+│ ctr-decrypt-8KB        │ CAGOULE-CTR              │     0.376 │  20.8 MB/s │
+│ cbc-decrypt-8KB        │ CAGOULE-CBC              │   119.467 │   0.1 MB/s │
+│ ctr-encrypt-64KB       │ CAGOULE-CTR              │     2.800 │  22.3 MB/s │
+│ cbc-encrypt-64KB       │ CAGOULE-CBC              │     7.725 │   8.1 MB/s │
+│ ctr-decrypt-64KB       │ CAGOULE-CTR              │     2.797 │  22.3 MB/s │
+│ cbc-decrypt-64KB       │ CAGOULE-CBC              │   119.385 │   0.5 MB/s │
+│ ctr-encrypt-1MB        │ CAGOULE-CTR              │    45.378 │  22.0 MB/s │
+│ cbc-encrypt-1MB        │ CAGOULE-CBC              │   145.054 │   6.9 MB/s │
+│ ctr-decrypt-1MB        │ CAGOULE-CTR              │    44.825 │  22.3 MB/s │
+│ cbc-decrypt-1MB        │ CAGOULE-CBC              │   166.668 │   6.0 MB/s │
+│ ctr-encrypt-10MB       │ CAGOULE-CTR              │   469.742 │  21.3 MB/s │
+│ cbc-encrypt-10MB       │ CAGOULE-CBC              │  1485.971 │   6.7 MB/s │
+│ ctr-decrypt-10MB       │ CAGOULE-CTR              │   469.705 │  21.3 MB/s │
+│ cbc-decrypt-10MB       │ CAGOULE-CBC              │   690.249 │  14.5 MB/s │
+│ ctr-auto-128B          │ CAGOULE-CTR-auto         │     0.032 │   3.8 MB/s │
+│ ctr-auto-4KB           │ CAGOULE-CTR-auto         │     0.490 │   8.0 MB/s │
+│ ctr-auto-64KB          │ CAGOULE-CTR-auto         │     2.803 │  22.3 MB/s │
+│ ctr-auto-1MB           │ CAGOULE-CTR-auto         │    45.444 │  22.0 MB/s │
+│ ctr-sym-encrypt-64KB   │ CAGOULE-CTR-symmetry-enc │     2.802 │  22.3 MB/s │
+│ ctr-sym-decrypt-64KB   │ CAGOULE-CTR-symmetry-dec │     2.803 │  22.3 MB/s │
+│ ctr-sym-encrypt-1MB    │ CAGOULE-CTR-symmetry-enc │    45.250 │  22.1 MB/s │
+│ ctr-sym-decrypt-1MB    │ CAGOULE-CTR-symmetry-dec │    44.976 │  22.2 MB/s │
+│ migrate-cbc-ctr-1KB    │ CAGOULE-migrate          │   237.480 │   0.0 MB/s │
+│ migrate-cbc-ctr-64KB   │ CAGOULE-migrate          │   249.136 │   0.3 MB/s │
+│ migrate-cbc-ctr-1MB    │ CAGOULE-migrate          │   353.073 │   2.8 MB/s │
+│ bulk-ctr-1msgs         │ CAGOULE-bulk-CTR         │   118.074 │   0.5 MB/s │
+│ individual-ctr-1msgs   │ CAGOULE-individual-CTR   │   122.170 │   0.5 MB/s │
+│ bulk-ctr-5msgs         │ CAGOULE-bulk-CTR         │   596.575 │   0.5 MB/s │
+│ individual-ctr-5msgs   │ CAGOULE-individual-CTR   │   587.676 │   0.5 MB/s │
+│ bulk-ctr-10msgs        │ CAGOULE-bulk-CTR         │  1190.376 │   0.5 MB/s │
+│ individual-ctr-10msgs  │ CAGOULE-individual-CTR   │  1204.107 │   0.5 MB/s │
+│ bulk-ctr-50msgs        │ CAGOULE-bulk-CTR         │  5969.964 │   0.5 MB/s │
+│ individual-ctr-50msgs  │ CAGOULE-individual-CTR   │  6042.054 │   0.5 MB/s │
+│ bulk-ctr-100msgs       │ CAGOULE-bulk-CTR         │ 11835.390 │   0.5 MB/s │
+│ individual-ctr-100msgs │ CAGOULE-individual-CTR   │ 11852.289 │   0.5 MB/s │
+╰────────────────────────┴──────────────────────────┴───────────┴────────────╯
+
+✓ Pas de régression 
+  0 benchmarks OK vs historique (N≥5).
+  → Historique : run_id=8c799d9c... sauvegardé dans .cagoule_bench/history.db
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$
+
+
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ cagoule-bench run --suite ctr --iterations 10 --warmup 2 --format console
+  → Config chargée depuis : 
+/home/slim/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2/cagoule_bench.toml
+
+────────────────────────────────────────────────────── cagoule-bench v2.0.0 ───────────────────────────────────────────────────────
+  Platform: x86_64  Python: 3.12.3  CAGOULE: 3.0.0  matrix: avx2  omega: C
+  Suites: ctr  Iterations: 10  Warmup: 2  Tag: default
+
+  ✓ ctr — 41 benchmarks
+
+──────────────────────────────────────────────── Terminé en 433.0s — 41 résultats ─────────────────────────────────────────────────
+
+
+╭───────────────────────────────────────────────────── CAGOULE-BENCH v2.2.0 ──────────────────────────────────────────────────────╮
+│ cagoule-bench v2.2.0  |  x86_64  |  3.12.3  |  matrix: ?  omega: ?  |  2026-06-14 16:21 UTC                                     │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CTR SUITE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CTR vs CBC — Throughput Comparison
+╭──────┬────────────┬────────────┬─────────┬────────╮
+│ Size │ CTR (MB/s) │ CBC (MB/s) │ Speedup │ CTR ms │
+├──────┼────────────┼────────────┼─────────┼────────┤
+│ 10MB │       21.3 │        6.8 │    ×3.1 │ 469.46 │
+│ 1KB  │       14.4 │        3.8 │    ×3.8 │   0.07 │
+│ 1MB  │       22.2 │        7.0 │    ×3.2 │  45.09 │
+│ 64KB │       22.3 │        8.0 │    ×2.8 │   2.80 │
+│ 8KB  │       18.9 │        7.6 │    ×2.5 │   0.41 │
+╰──────┴────────────┴────────────┴─────────┴────────╯
+CTR target: >15 MB/s Python e2e
+
+CTR Pipeline 4x — Auto-dispatch
+                                    
+  Size      Throughput   Mean (ms)  
+ ────────────────────────────────── 
+  128B 4x     3.1 MB/s        0.04  
+  4KB 4x     20.1 MB/s        0.19  
+  64KB 4x    22.5 MB/s        2.78  
+  1MB 4x     22.3 MB/s       44.93  
+                                    
+4x pipeline activates for messages ≥ 128 bytes (8 blocks)
+
+CTR Symmetry — encrypt = decrypt
+                                                  
+  Size   Encrypt (MB/s)   Decrypt (MB/s)   Ratio  
+ ──────────────────────────────────────────────── 
+  64KB             22.1             22.1   1.00×  
+  1MB              22.3             22.3   1.00×  
+                                                  
+
+CBC → CTR Migration Cost
+                                 
+  Size   Time (ms)   Throughput  
+ ─────────────────────────────── 
+  1KB        229.6     0.0 MB/s  
+  64KB       237.7     0.3 MB/s  
+  1MB        350.1     2.9 MB/s  
+                                 
+
+Bulk CTR — KDF Amortization
+╭──────────┬───────────┬─────────────────┬───────┬───────────╮
+│ Messages │ Bulk (ms) │ Individual (ms) │  Gain │ KDF calls │
+├──────────┼───────────┼─────────────────┼───────┼───────────┤
+│        1 │     117.4 │             2.8 │ 0.02× │  1 vs 1   │
+│        5 │     596.3 │            14.1 │ 0.02× │  1 vs 5   │
+│       10 │    1206.2 │            28.3 │ 0.02× │  1 vs 10  │
+│       50 │    5952.1 │           140.5 │ 0.02× │  1 vs 50  │
+│      100 │   11843.6 │           280.7 │ 0.02× │ 1 vs 100  │
+╰──────────┴───────────┴─────────────────┴───────┴───────────╯
+Bulk: 1 Argon2id derivation shared across N messages
+
+✓ Pas de régression 
+  0 benchmarks OK vs historique (N≥5).
+  → Historique : run_id=1c6fa069... sauvegardé dans .cagoule_bench/history.db
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ 
+
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ cagoule-bench run --suite encryption --iterations 10 --warmup 2 --format console
+  → Config chargée depuis : 
+/home/slim/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2/cagoule_bench.toml
+
+────────────────────────────────────────────────────── cagoule-bench v2.0.0 ───────────────────────────────────────────────────────
+  Platform: x86_64  Python: 3.12.3  CAGOULE: 3.0.0  matrix: avx2  omega: C
+  Suites: encryption  Iterations: 10  Warmup: 2  Tag: default
+
+  ✓ encryption — 40 benchmarks
+
+───────────────────────────────────────────────── Terminé en 70.0s — 40 résultats ─────────────────────────────────────────────────
+
+
+╭───────────────────────────────────────────────────── CAGOULE-BENCH v2.2.0 ──────────────────────────────────────────────────────╮
+│ cagoule-bench v2.2.0  |  x86_64  |  3.12.3  |  matrix: avx2  omega: C  |  2026-06-14 16:24 UTC                                  │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ENCRYPTION SUITE
@@ -20,172 +170,46 @@
 ╭────────────────────┬────────────────────┬─────────────┬───────────┬─────────┬──────────┬───────┬───────────╮
 │ Test               │ Algorithm          │  Throughput │ Mean (ms) │ ±Stddev │ p95 (ms) │   CV% │  Mem Peak │
 ├────────────────────┼────────────────────┼─────────────┼───────────┼─────────┼──────────┼───────┼───────────┤
-│ encrypt-1KB        │ CAGOULE            │    4.2 MB/s │     0.231 │  ±0.007 │    0.249 │  3.0% │   0.07 MB │
-│ decrypt-1KB        │ CAGOULE            │    0.0 MB/s │   179.601 │  ±7.699 │  192.326 │  4.3% │   0.04 MB │
-│ encrypt-1KB        │ AES-256-GCM        │  155.2 MB/s │     0.006 │  ±0.001 │    0.007 │  9.7% │   0.00 MB │
-│ decrypt-1KB        │ AES-256-GCM        │  172.7 MB/s │     0.006 │  ±0.000 │    0.006 │  2.2% │   0.00 MB │
-│ encrypt-1KB        │ ChaCha20-Poly1305  │  160.5 MB/s │     0.006 │  ±0.000 │    0.007 │  5.7% │   0.00 MB │
-│ decrypt-1KB        │ ChaCha20-Poly1305  │  160.5 MB/s │     0.006 │  ±0.000 │    0.007 │  4.3% │   0.00 MB │
-│ encrypt-8KB        │ CAGOULE            │    4.5 MB/s │     1.731 │  ±0.135 │    2.165 │  7.8% │   0.57 MB │
-│ decrypt-8KB        │ CAGOULE            │    0.0 MB/s │   184.560 │ ±10.503 │  206.237 │  5.7% │   0.21 MB │
-│ encrypt-8KB        │ AES-256-GCM        │  706.4 MB/s │     0.011 │  ±0.000 │    0.012 │  2.1% │   0.02 MB │
-│ decrypt-8KB        │ AES-256-GCM        │  792.4 MB/s │     0.010 │  ±0.003 │    0.023 │ 32.6% │   0.02 MB │
-│ encrypt-8KB        │ ChaCha20-Poly1305  │  602.0 MB/s │     0.013 │  ±0.000 │    0.013 │  1.0% │   0.02 MB │
-│ decrypt-8KB        │ ChaCha20-Poly1305  │  602.6 MB/s │     0.013 │  ±0.003 │    0.024 │ 19.3% │   0.02 MB │
-│ encrypt-64KB       │ CAGOULE            │    4.5 MB/s │    13.792 │  ±0.556 │   15.041 │  4.0% │   4.56 MB │
-│ decrypt-64KB       │ CAGOULE            │    0.3 MB/s │   190.489 │  ±5.652 │  201.334 │  3.0% │   1.57 MB │
-│ encrypt-64KB       │ AES-256-GCM        │ 2344.9 MB/s │     0.027 │  ±0.002 │    0.034 │  6.9% │   0.13 MB │
-│ decrypt-64KB       │ AES-256-GCM        │ 2494.6 MB/s │     0.025 │  ±0.000 │    0.027 │  1.5% │   0.13 MB │
-│ encrypt-64KB       │ ChaCha20-Poly1305  │ 1025.3 MB/s │     0.061 │  ±0.002 │    0.064 │  2.5% │   0.13 MB │
-│ decrypt-64KB       │ ChaCha20-Poly1305  │ 1021.6 MB/s │     0.061 │  ±0.002 │    0.066 │  2.7% │   0.13 MB │
-│ encrypt-1MB        │ CAGOULE            │    4.3 MB/s │   231.934 │  ±8.606 │  240.804 │  3.7% │  73.00 MB │
-│ decrypt-1MB        │ CAGOULE            │    4.1 MB/s │   245.405 │  ±7.024 │  271.143 │  2.9% │  25.01 MB │
-│ encrypt-1MB        │ AES-256-GCM        │ 2224.9 MB/s │     0.449 │  ±0.045 │    0.551 │ 10.0% │   2.00 MB │
-│ decrypt-1MB        │ AES-256-GCM        │ 2451.9 MB/s │     0.408 │  ±0.008 │    0.425 │  2.0% │   2.00 MB │
-│ encrypt-1MB        │ ChaCha20-Poly1305  │ 1084.1 MB/s │     0.922 │  ±0.025 │    0.953 │  2.7% │   2.00 MB │
-│ decrypt-1MB        │ ChaCha20-Poly1305  │  911.3 MB/s │     1.097 │  ±0.109 │    1.272 │ 10.0% │   2.00 MB │
-│ encrypt-10MB       │ CAGOULE            │    4.5 MB/s │  2206.950 │ ±29.405 │ 2297.078 │  1.3% │ 730.01 MB │
-│ decrypt-10MB       │ CAGOULE            │    9.6 MB/s │  1038.886 │  ±9.550 │ 1068.956 │  0.9% │ 250.01 MB │
-│ encrypt-10MB       │ AES-256-GCM        │ 2353.2 MB/s │     4.250 │  ±0.118 │    4.499 │  2.8% │  20.00 MB │
-│ decrypt-10MB       │ AES-256-GCM        │ 1965.6 MB/s │     5.088 │  ±0.294 │    5.888 │  5.8% │  20.00 MB │
-│ encrypt-10MB       │ ChaCha20-Poly1305  │ 1031.4 MB/s │     9.696 │  ±0.596 │   10.494 │  6.1% │  20.00 MB │
-│ decrypt-10MB       │ ChaCha20-Poly1305  │ 1010.7 MB/s │     9.895 │  ±0.579 │   10.989 │  5.9% │  20.00 MB │
-╰────────────────────┴────────────────────┴─────────────┴───────────┴─────────┴──────────┴───────┴───────────╯
-
-Overhead — CAGOULE vs standards
-                                                        
-  Test           vs AES-256-GCM   vs ChaCha20-Poly1305  
- ────────────────────────────────────────────────────── 
-  decrypt-10MB           -99.5%                 -99.0%  
-  decrypt-1KB           -100.0%                -100.0%  
-  decrypt-1MB            -99.8%                 -99.6%  
-  decrypt-64KB          -100.0%                -100.0%  
-  decrypt-8KB           -100.0%                -100.0%  
-  encrypt-10MB           -99.8%                 -99.6%  
-  encrypt-1KB            -97.3%                 -97.4%  
-  encrypt-1MB            -99.8%                 -99.6%  
-  encrypt-64KB           -99.8%                 -99.6%  
-  encrypt-8KB            -99.4%                 -99.3%  
-                                                        
-
-✗ RÉGRESSION DÉTECTÉE 
-    RÉGRESSION encryption/encrypt-1KB/CAGOULE: baseline_avg=5.1 → current=4.2 MB/s (-17.5% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-1KB/CAGOULE: baseline_avg=0.0 → current=0.0 MB/s (-26.5% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-1KB/AES-256-GCM: baseline_avg=188.7 → current=155.2 MB/s (-17.7% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-1KB/AES-256-GCM: baseline_avg=234.9 → current=172.7 MB/s (-26.5% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-1KB/ChaCha20-Poly1305: baseline_avg=189.2 → current=160.5 MB/s (-15.2% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-8KB/CAGOULE: baseline_avg=5.3 → current=4.5 MB/s (-14.9% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-8KB/CAGOULE: baseline_avg=0.1 → current=0.0 MB/s (-31.3% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-8KB/AES-256-GCM: baseline_avg=842.2 → current=706.4 MB/s (-16.1% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-8KB/AES-256-GCM: baseline_avg=1037.9 → current=792.4 MB/s (-23.7% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-8KB/ChaCha20-Poly1305: baseline_avg=668.9 → current=602.6 MB/s (-9.9% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-64KB/CAGOULE: baseline_avg=5.4 → current=4.5 MB/s (-16.5% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-64KB/CAGOULE: baseline_avg=0.5 → current=0.3 MB/s (-30.4% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-1MB/CAGOULE: baseline_avg=5.0 → current=4.3 MB/s (-13.0% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-1MB/AES-256-GCM: baseline_avg=3316.4 → current=2224.9 MB/s (-32.9% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-1MB/AES-256-GCM: baseline_avg=3449.0 → current=2451.9 MB/s (-28.9% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-1MB/ChaCha20-Poly1305: baseline_avg=1688.1 → current=1084.1 MB/s (-35.8% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-1MB/ChaCha20-Poly1305: baseline_avg=1656.3 → current=911.3 MB/s (-45.0% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-10MB/CAGOULE: baseline_avg=4.8 → current=4.5 MB/s (-5.6% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-10MB/AES-256-GCM: baseline_avg=3202.2 → current=2353.2 MB/s (-26.5% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-10MB/AES-256-GCM: baseline_avg=2722.7 → current=1965.6 MB/s (-27.8% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-10MB/ChaCha20-Poly1305: baseline_avg=1456.9 → current=1031.4 MB/s (-29.2% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-10MB/ChaCha20-Poly1305: baseline_avg=1420.6 → current=1010.7 MB/s (-28.9% < seuil -5%) [N=5]
-  → Historique : run_id=41ab7b42... sauvegardé dans .cagoule_bench/history.db
-
-
-
-
-(venv) slim@slim:~/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench$ cagoule-bench info
-
-──────────────────────────────────────────────────── cagoule-bench v2.0.0 — Environment Info ─────────────────────────────────────────────────────
-
-Système
-                                                             
-  Key         Value                                          
- ─────────────────────────────────────────────────────────── 
-  Platform    Linux-6.17.0-22-generic-x86_64-with-glibc2.39  
-  Machine     x86_64                                         
-  Python      3.12.3                                         
-  CPU count   20                                             
-  AES-NI      ✓                                              
-  AVX2        ✓                                              
-                                                             
-
-CAGOULE
-                                                   
-  Key               Value                          
- ───────────────────────────────────────────────── 
-  cagoule version   2.5.0                          
-  matrix_backend    scalar                         
-  omega_backend     C                              
-  CGL1 format       inchangé (v2.2.0 rétrocompat)  
-                                                   
-
-Dépendances
-                              
-  Package        Status       
- ──────────────────────────── 
-  cryptography   ✓ installed  
-  argon2-cffi    ✓ installed  
-  psutil         ✓ installed  
-  rich           ✓ installed  
-  click          ✓ installed  
-  jinja2         ✓ installed  
-                              
-
-(venv) slim@slim:~/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench$ cagoule-bench run --suite encryption --iterations 30 --warmup 3 --format console
-  → Config chargée depuis : /home/slim/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench/cagoule_bench.toml
-
-────────────────────────────────────────────────────────────── cagoule-bench v2.0.0 ──────────────────────────────────────────────────────────────
-  Platform: x86_64  Python: 3.12.3  CAGOULE: 2.5.0  matrix: scalar  omega: C
-  Suites: encryption  Iterations: 30  Warmup: 3  Tag: default
-
-  ✓ encryption — 30 benchmarks
-
-──────────────────────────────────────────────────────── Terminé en 111.7s — 30 résultats ────────────────────────────────────────────────────────
-
-
-╭───────────────────────────────────────────────────────────── CAGOULE-BENCH v2.0.0 ─────────────────────────────────────────────────────────────╮
-│ cagoule-bench v2.0.0  |  x86_64  |  3.12.3  |  matrix: scalar  omega: C  |  2026-05-25 17:16 UTC                                               │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ENCRYPTION SUITE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-╭────────────────────┬────────────────────┬─────────────┬───────────┬─────────┬──────────┬───────┬───────────╮
-│ Test               │ Algorithm          │  Throughput │ Mean (ms) │ ±Stddev │ p95 (ms) │   CV% │  Mem Peak │
-├────────────────────┼────────────────────┼─────────────┼───────────┼─────────┼──────────┼───────┼───────────┤
-│ encrypt-1KB        │ CAGOULE            │    7.1 MB/s │     0.138 │  ±0.003 │    0.143 │  2.0% │   0.07 MB │
-│ decrypt-1KB        │ CAGOULE            │    0.0 MB/s │   114.849 │  ±1.837 │  120.488 │  1.6% │   0.04 MB │
-│ encrypt-1KB        │ AES-256-GCM        │  177.5 MB/s │     0.006 │  ±0.002 │    0.008 │ 45.3% │   0.00 MB │
-│ decrypt-1KB        │ AES-256-GCM        │  216.8 MB/s │     0.005 │  ±0.000 │    0.005 │  3.8% │   0.00 MB │
-│ encrypt-1KB        │ ChaCha20-Poly1305  │  166.8 MB/s │     0.006 │  ±0.000 │    0.006 │  3.7% │   0.00 MB │
-│ decrypt-1KB        │ ChaCha20-Poly1305  │  209.9 MB/s │     0.005 │  ±0.000 │    0.005 │  2.8% │   0.00 MB │
-│ encrypt-8KB        │ CAGOULE            │    8.1 MB/s │     0.967 │  ±0.012 │    1.007 │  1.3% │   0.57 MB │
-│ decrypt-8KB        │ CAGOULE            │    0.1 MB/s │   118.699 │  ±3.225 │  123.414 │  2.7% │   0.21 MB │
-│ encrypt-8KB        │ AES-256-GCM        │  769.8 MB/s │     0.010 │  ±0.000 │    0.011 │  3.9% │   0.02 MB │
-│ decrypt-8KB        │ AES-256-GCM        │  745.8 MB/s │     0.010 │  ±0.003 │    0.010 │ 28.9% │   0.02 MB │
-│ encrypt-8KB        │ ChaCha20-Poly1305  │  515.8 MB/s │     0.015 │  ±0.002 │    0.020 │ 11.8% │   0.02 MB │
-│ decrypt-8KB        │ ChaCha20-Poly1305  │  656.3 MB/s │     0.012 │  ±0.001 │    0.013 │  8.9% │   0.02 MB │
-│ encrypt-64KB       │ CAGOULE            │    8.0 MB/s │     7.796 │  ±0.169 │    7.871 │  2.2% │   4.56 MB │
-│ decrypt-64KB       │ CAGOULE            │    0.5 MB/s │   119.886 │  ±2.121 │  123.051 │  1.8% │   1.57 MB │
-│ encrypt-64KB       │ AES-256-GCM        │ 1367.6 MB/s │     0.046 │  ±0.002 │    0.049 │  3.9% │   0.13 MB │
-│ decrypt-64KB       │ AES-256-GCM        │ 1839.8 MB/s │     0.034 │  ±0.002 │    0.039 │  5.8% │   0.13 MB │
-│ encrypt-64KB       │ ChaCha20-Poly1305  │ 1012.8 MB/s │     0.062 │  ±0.003 │    0.066 │  4.8% │   0.13 MB │
-│ decrypt-64KB       │ ChaCha20-Poly1305  │ 1323.5 MB/s │     0.047 │  ±0.003 │    0.051 │  5.5% │   0.13 MB │
-│ encrypt-1MB        │ CAGOULE            │    6.9 MB/s │   144.502 │  ±1.798 │  146.945 │  1.2% │  73.00 MB │
-│ decrypt-1MB        │ CAGOULE            │    6.0 MB/s │   167.621 │  ±5.271 │  175.330 │  3.1% │  25.01 MB │
-│ encrypt-1MB        │ AES-256-GCM        │ 2993.7 MB/s │     0.334 │  ±0.103 │    0.544 │ 30.8% │   2.00 MB │
-│ decrypt-1MB        │ AES-256-GCM        │ 4157.2 MB/s │     0.241 │  ±0.002 │    0.243 │  0.9% │   2.00 MB │
-│ encrypt-1MB        │ ChaCha20-Poly1305  │ 1783.4 MB/s │     0.561 │  ±0.038 │    0.665 │  6.7% │   2.00 MB │
-│ decrypt-1MB        │ ChaCha20-Poly1305  │ 1586.5 MB/s │     0.630 │  ±0.144 │    0.890 │ 22.9% │   2.00 MB │
-│ encrypt-10MB       │ CAGOULE            │    6.8 MB/s │  1479.784 │  ±9.191 │ 1507.292 │  0.6% │ 730.01 MB │
-│ decrypt-10MB       │ CAGOULE            │   14.4 MB/s │   694.591 │  ±7.722 │  711.551 │  1.1% │ 250.01 MB │
-│ encrypt-10MB       │ AES-256-GCM        │ 3738.1 MB/s │     2.675 │  ±0.033 │    2.751 │  1.2% │  20.00 MB │
-│ decrypt-10MB       │ AES-256-GCM        │ 3199.2 MB/s │     3.126 │  ±0.195 │    3.324 │  6.2% │  20.00 MB │
-│ encrypt-10MB       │ ChaCha20-Poly1305  │ 1719.8 MB/s │     5.815 │  ±0.106 │    6.068 │  1.8% │  20.00 MB │
-│ decrypt-10MB       │ ChaCha20-Poly1305  │ 1584.6 MB/s │     6.311 │  ±0.228 │    6.766 │  3.6% │  20.00 MB │
+│ encrypt-1KB        │ CAGOULE-CBC        │    6.8 MB/s │     0.143 │  ±0.004 │    0.148 │  2.5% │   0.07 MB │
+│ decrypt-1KB        │ CAGOULE-CBC        │    0.0 MB/s │   116.970 │  ±3.324 │  124.968 │  2.8% │   0.04 MB │
+│ encrypt-1KB        │ CAGOULE-CTR        │    7.8 MB/s │     0.125 │  ±0.003 │    0.132 │  2.3% │   0.01 MB │
+│ decrypt-1KB        │ CAGOULE-CTR        │    6.1 MB/s │     0.161 │  ±0.008 │    0.177 │  5.0% │   0.01 MB │
+│ encrypt-1KB        │ AES-256-GCM        │  134.9 MB/s │     0.007 │  ±0.004 │    0.019 │ 59.4% │   0.00 MB │
+│ decrypt-1KB        │ AES-256-GCM        │  235.3 MB/s │     0.004 │  ±0.000 │    0.005 │  5.8% │   0.00 MB │
+│ encrypt-1KB        │ ChaCha20-Poly1305  │  133.1 MB/s │     0.007 │  ±0.000 │    0.008 │  3.8% │   0.00 MB │
+│ decrypt-1KB        │ ChaCha20-Poly1305  │  161.2 MB/s │     0.006 │  ±0.000 │    0.007 │  5.0% │   0.00 MB │
+│ encrypt-8KB        │ CAGOULE-CBC        │    8.1 MB/s │     0.969 │  ±0.002 │    0.975 │  0.2% │   0.57 MB │
+│ decrypt-8KB        │ CAGOULE-CBC        │    0.1 MB/s │   114.386 │  ±0.258 │  115.018 │  0.2% │   0.21 MB │
+│ encrypt-8KB        │ CAGOULE-CTR        │   13.0 MB/s │     0.603 │  ±0.090 │    0.728 │ 15.0% │   0.07 MB │
+│ decrypt-8KB        │ CAGOULE-CTR        │   12.1 MB/s │     0.646 │  ±0.031 │    0.703 │  4.8% │   0.09 MB │
+│ encrypt-8KB        │ AES-256-GCM        │  932.2 MB/s │     0.008 │  ±0.000 │    0.009 │  4.5% │   0.02 MB │
+│ decrypt-8KB        │ AES-256-GCM        │  874.5 MB/s │     0.009 │  ±0.000 │    0.010 │  3.6% │   0.02 MB │
+│ encrypt-8KB        │ ChaCha20-Poly1305  │  543.7 MB/s │     0.014 │  ±0.002 │    0.020 │ 14.1% │   0.02 MB │
+│ decrypt-8KB        │ ChaCha20-Poly1305  │  636.2 MB/s │     0.012 │  ±0.000 │    0.013 │  2.0% │   0.02 MB │
+│ encrypt-64KB       │ CAGOULE-CBC        │    8.0 MB/s │     7.776 │  ±0.019 │    7.799 │  0.2% │   4.56 MB │
+│ decrypt-64KB       │ CAGOULE-CBC        │    0.5 MB/s │   117.604 │  ±0.475 │  118.556 │  0.4% │   1.57 MB │
+│ encrypt-64KB       │ CAGOULE-CTR        │   22.4 MB/s │     2.794 │  ±0.007 │    2.805 │  0.3% │   0.57 MB │
+│ decrypt-64KB       │ CAGOULE-CTR        │   22.4 MB/s │     2.792 │  ±0.020 │    2.840 │  0.7% │   0.69 MB │
+│ encrypt-64KB       │ AES-256-GCM        │ 1427.4 MB/s │     0.044 │  ±0.002 │    0.049 │  5.0% │   0.13 MB │
+│ decrypt-64KB       │ AES-256-GCM        │ 1794.9 MB/s │     0.035 │  ±0.002 │    0.041 │  6.2% │   0.13 MB │
+│ encrypt-64KB       │ ChaCha20-Poly1305  │  936.5 MB/s │     0.067 │  ±0.002 │    0.072 │  2.5% │   0.13 MB │
+│ decrypt-64KB       │ ChaCha20-Poly1305  │ 1049.3 MB/s │     0.060 │  ±0.000 │    0.060 │  0.3% │   0.13 MB │
+│ encrypt-1MB        │ CAGOULE-CBC        │    6.9 MB/s │   144.287 │  ±1.855 │  147.239 │  1.3% │  73.00 MB │
+│ decrypt-1MB        │ CAGOULE-CBC        │    6.0 MB/s │   165.894 │  ±2.196 │  169.811 │  1.3% │  25.01 MB │
+│ encrypt-1MB        │ CAGOULE-CTR        │   22.2 MB/s │    44.987 │  ±0.383 │   45.807 │  0.9% │   9.01 MB │
+│ decrypt-1MB        │ CAGOULE-CTR        │   22.3 MB/s │    44.811 │  ±0.231 │   45.437 │  0.5% │  11.00 MB │
+│ encrypt-1MB        │ AES-256-GCM        │ 4134.5 MB/s │     0.242 │  ±0.001 │    0.245 │  0.6% │   2.00 MB │
+│ decrypt-1MB        │ AES-256-GCM        │ 4174.7 MB/s │     0.240 │  ±0.001 │    0.242 │  0.5% │   2.00 MB │
+│ encrypt-1MB        │ ChaCha20-Poly1305  │ 1257.3 MB/s │     0.795 │  ±0.133 │    0.983 │ 16.7% │   2.00 MB │
+│ decrypt-1MB        │ ChaCha20-Poly1305  │ 1859.5 MB/s │     0.538 │  ±0.003 │    0.545 │  0.5% │   2.00 MB │
+│ encrypt-10MB       │ CAGOULE-CBC        │    6.7 MB/s │  1485.096 │  ±8.776 │ 1500.090 │  0.6% │ 730.01 MB │
+│ decrypt-10MB       │ CAGOULE-CBC        │   14.5 MB/s │   689.647 │  ±2.085 │  692.398 │  0.3% │ 250.01 MB │
+│ encrypt-10MB       │ CAGOULE-CTR        │   21.3 MB/s │   469.449 │  ±1.007 │  472.266 │  0.2% │  90.01 MB │
+│ decrypt-10MB       │ CAGOULE-CTR        │   21.1 MB/s │   473.075 │  ±1.029 │  474.929 │  0.2% │ 110.01 MB │
+│ encrypt-10MB       │ AES-256-GCM        │ 3340.0 MB/s │     2.994 │  ±0.033 │    3.047 │  1.1% │  20.00 MB │
+│ decrypt-10MB       │ AES-256-GCM        │ 3017.9 MB/s │     3.314 │  ±0.051 │    3.371 │  1.6% │  20.00 MB │
+│ encrypt-10MB       │ ChaCha20-Poly1305  │ 1542.6 MB/s │     6.482 │  ±0.375 │    7.259 │  5.8% │  20.00 MB │
+│ decrypt-10MB       │ ChaCha20-Poly1305  │ 1546.6 MB/s │     6.466 │  ±0.260 │    7.189 │  4.0% │  20.00 MB │
 ╰────────────────────┴────────────────────┴─────────────┴───────────┴─────────┴──────────┴───────┴───────────╯
 
 Overhead — CAGOULE vs standards
@@ -194,150 +218,76 @@ Overhead — CAGOULE vs standards
  ────────────────────────────────────────────────────── 
   decrypt-10MB           -99.5%                 -99.1%  
   decrypt-1KB           -100.0%                -100.0%  
-  decrypt-1MB            -99.9%                 -99.6%  
-  decrypt-64KB          -100.0%                -100.0%  
+  decrypt-1MB            -99.9%                 -99.7%  
+  decrypt-64KB          -100.0%                 -99.9%  
   decrypt-8KB           -100.0%                -100.0%  
   encrypt-10MB           -99.8%                 -99.6%  
-  encrypt-1KB            -96.0%                 -95.8%  
-  encrypt-1MB            -99.8%                 -99.6%  
-  encrypt-64KB           -99.4%                 -99.2%  
-  encrypt-8KB            -99.0%                 -98.4%  
+  encrypt-1KB            -94.9%                 -94.9%  
+  encrypt-1MB            -99.8%                 -99.4%  
+  encrypt-64KB           -99.4%                 -99.1%  
+  encrypt-8KB            -99.1%                 -98.5%  
                                                         
 
-✗ RÉGRESSION DÉTECTÉE 
-    RÉGRESSION encryption/encrypt-8KB/AES-256-GCM: baseline_avg=833.0 → current=769.8 MB/s (-7.6% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-8KB/AES-256-GCM: baseline_avg=1015.9 → current=745.8 MB/s (-26.6% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-8KB/ChaCha20-Poly1305: baseline_avg=623.4 → current=515.8 MB/s (-17.3% < seuil -5%) [N=5]
-    RÉGRESSION encryption/encrypt-64KB/AES-256-GCM: baseline_avg=2023.1 → current=1367.6 MB/s (-32.4% < seuil -5%) [N=5]
-    RÉGRESSION encryption/decrypt-64KB/AES-256-GCM: baseline_avg=1951.9 → current=1839.8 MB/s (-5.7% < seuil -5%) [N=5]
-  → Historique : run_id=40fa8bab... sauvegardé dans .cagoule_bench/history.db
+✓ Pas de régression 
+  0 benchmarks OK vs historique (N≥5).
+  → Historique : run_id=8e635a0b... sauvegardé dans .cagoule_bench/history.db
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ 
 
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ cagoule-bench run --suite avx2 --iterations 20 --warmup 3 --format console
+  → Config chargée depuis : 
+/home/slim/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2/cagoule_bench.toml
 
-
-(venv) slim@slim:~/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench$ cagoule-bench run --suite avx2 --iterations 30 --warmup 3 --format console
-  → Config chargée depuis : /home/slim/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench/cagoule_bench.toml
-
-────────────────────────────────────────────────────────────── cagoule-bench v2.0.0 ──────────────────────────────────────────────────────────────
-  Platform: x86_64  Python: 3.12.3  CAGOULE: 2.5.0  matrix: scalar  omega: C
-  Suites: avx2  Iterations: 30  Warmup: 3  Tag: default
+────────────────────────────────────────────────────── cagoule-bench v2.0.0 ───────────────────────────────────────────────────────
+  Platform: x86_64  Python: 3.12.3  CAGOULE: 3.0.0  matrix: avx2  omega: C
+  Suites: avx2  Iterations: 20  Warmup: 3  Tag: default
 
   ✓ avx2 — 6 benchmarks
 
-──────────────────────────────────────────────────────── Terminé en 134.7s — 6 résultats ─────────────────────────────────────────────────────────
+───────────────────────────────────────────────── Terminé en 32.5s — 6 résultats ──────────────────────────────────────────────────
 
 
-╭───────────────────────────────────────────────────────────── CAGOULE-BENCH v2.0.0 ─────────────────────────────────────────────────────────────╮
-│ cagoule-bench v2.0.0  |  x86_64  |  3.12.3  |  matrix: scalar  omega: C  |  2026-05-25 17:20 UTC                                               │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭───────────────────────────────────────────────────── CAGOULE-BENCH v2.2.0 ──────────────────────────────────────────────────────╮
+│ cagoule-bench v2.2.0  |  x86_64  |  3.12.3  |  matrix: avx2  omega: C  |  2026-06-14 16:27 UTC                                  │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   AVX2 SUITE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 CAGOULE v2.2.0 — Vectorisation AVX2 vs Scalaire
-  matrix_backend: scalar  omega_backend: C  AVX2 actif: ✗ NON (fallback scalaire)
+  matrix_backend: avx2  omega_backend: C  AVX2 actif: ✓ OUI
 ╭────────┬─────────────┬───────────────┬─────────┬────────┬─────────┬───────────╮
 │ Taille │ AVX2 (MB/s) │ Scalar (MB/s) │ Speedup │   Gain │ AVX2 ms │ Scalar ms │
 ├────────┼─────────────┼───────────────┼─────────┼────────┼─────────┼───────────┤
-│   64KB │         8.1 │           8.2 │   0.99x │ +-0.5% │    7.70 │      7.66 │
-│    1MB │         6.7 │           6.7 │   1.00x │ +-0.1% │  150.34 │    150.27 │
-│   10MB │         6.7 │           6.7 │   1.00x │  +0.1% │ 1494.89 │   1496.42 │
+│   64KB │        22.3 │          22.7 │   0.98x │ +-2.1% │    2.81 │      2.75 │
+│    1MB │        22.2 │          22.3 │   1.00x │ +-0.3% │   45.06 │     44.93 │
+│   10MB │        20.9 │          21.5 │   0.97x │ +-2.8% │  478.18 │    465.20 │
 ╰────────┴─────────────┴───────────────┴─────────┴────────┴─────────┴───────────╯
 
-  Gain moyen AVX2 : -0.2%  (objectif roadmap v2.2.0 : ≥ +25%)
+  Gain moyen AVX2 : -1.7%  (objectif roadmap v2.2.0 : ≥ +25%)
 Note: CAGOULE_FORCE_SCALAR=1 utilisé pour mesurer le chemin scalaire
 
 ✓ Pas de régression 
-  6 benchmarks OK vs historique (N≥5).
-  → Historique : run_id=246bbd2e... sauvegardé dans .cagoule_bench/history.db
+  0 benchmarks OK vs historique (N≥5).
+  → Historique : run_id=70b3e010... sauvegardé dans .cagoule_bench/history.db
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ 
+
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ cagoule-bench run --suite streaming --iterations 1 --warmup 0 --format console
+  → Config chargée depuis : 
+/home/slim/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2/cagoule_bench.toml
+
+────────────────────────────────────────────────────── cagoule-bench v2.0.0 ───────────────────────────────────────────────────────
+  Platform: x86_64  Python: 3.12.3  CAGOULE: 3.0.0  matrix: avx2  omega: C
+  Suites: streaming  Iterations: 1  Warmup: 10  Tag: default
+
+  ✓ streaming — 12 benchmarks
+
+──────────────────────────────────────────────── Terminé en 254.7s — 12 résultats ─────────────────────────────────────────────────
 
 
-(venv) slim@slim:~/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench$ cagoule-bench run --suite kdf --suite memory --suite streaming --iterations 3 --warmup 1 --format consolerations=50)
-  → Config chargée depuis : /home/slim/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench/cagoule_bench.toml
-
-────────────────────────────────────────────────────────────── cagoule-bench v2.0.0 ──────────────────────────────────────────────────────────────
-  Platform: x86_64  Python: 3.12.3  CAGOULE: 2.5.0  matrix: scalar  omega: C
-  Suites: kdf, memory, streaming  Iterations: 3  Warmup: 1  Tag: default
-
-  ✓ kdf — 33 benchmarks
-  ✓ memory — 4 benchmarks
-  ✓ streaming — 9 benchmarks
-
-──────────────────────────────────────────────────────── Terminé en 540.3s — 46 résultats ────────────────────────────────────────────────────────
-
-
-╭───────────────────────────────────────────────────────────── CAGOULE-BENCH v2.0.0 ─────────────────────────────────────────────────────────────╮
-│ cagoule-bench v2.0.0  |  x86_64  |  3.12.3  |  matrix: ?  omega: ?  |  2026-05-25 17:35 UTC                                                    │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  KDF SUITE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Argon2id — Grille de paramètres
-╭───┬────────┬───┬───────────┬─────────┬──────────┬───────┬────────────┬───────╮
-│ t │ m_cost │ p │ Mean (ms) │ ±Stddev │ Peak RAM │ Score │ GPU-resist │ OWASP │
-├───┼────────┼───┼───────────┼─────────┼──────────┼───────┼────────────┼───────┤
-│ 1 │ 16 MB  │ 1 │       7.9 │    ±0.1 │   0.0 MB │ 14.0  │    14.0    │   ✗   │
-│ 1 │ 16 MB  │ 2 │       6.2 │    ±0.1 │   0.0 MB │ 15.0  │    15.0    │   ✗   │
-│ 1 │ 16 MB  │ 4 │       3.7 │    ±0.3 │   0.0 MB │ 16.0  │    16.0    │   ✗   │
-│ 1 │ 64 MB  │ 1 │      52.0 │    ±0.5 │   0.0 MB │ 16.0  │    16.0    │   ✗   │
-│ 1 │ 64 MB  │ 2 │      44.5 │    ±6.0 │   0.0 MB │ 17.0  │    17.0    │   ✗   │
-│ 1 │ 64 MB  │ 4 │      26.4 │    ±1.4 │   0.0 MB │ 18.0  │    18.0    │   ✗   │
-│ 1 │ 128 MB │ 1 │     107.9 │    ±1.2 │   0.0 MB │ 17.0  │    17.0    │   ✗   │
-│ 1 │ 128 MB │ 2 │      76.6 │    ±4.1 │   0.0 MB │ 18.0  │    18.0    │   ✗   │
-│ 1 │ 128 MB │ 4 │      51.0 │    ±1.4 │   0.0 MB │ 19.0  │    19.0    │   ✗   │
-│ 3 │ 16 MB  │ 1 │      21.4 │    ±0.3 │   0.0 MB │ 15.6  │    14.0    │   ✗   │
-│ 3 │ 16 MB  │ 2 │      17.1 │    ±0.7 │   0.0 MB │ 16.6  │    15.0    │   ✗   │
-│ 3 │ 16 MB  │ 4 │       9.6 │    ±0.1 │   0.0 MB │ 17.6  │    16.0    │   ✗   │
-│ 3 │ 64 MB  │ 1 │     113.7 │    ±0.2 │   0.0 MB │ 17.6  │    16.0    │   ✓   │
-│ 3 │ 64 MB  │ 2 │      86.4 │    ±1.3 │   0.0 MB │ 18.6  │    17.0    │   ✓   │
-│ 3 │ 64 MB  │ 4 │      51.4 │    ±0.3 │   0.0 MB │ 19.6  │    18.0    │   ✓   │
-│ 3 │ 128 MB │ 1 │     241.6 │    ±3.2 │   0.0 MB │ 18.6  │    17.0    │   ✓   │
-│ 3 │ 128 MB │ 2 │     171.4 │    ±4.4 │   0.0 MB │ 19.6  │    18.0    │   ✓   │
-│ 3 │ 128 MB │ 4 │     102.9 │    ±2.8 │   0.0 MB │ 20.6  │    19.0    │   ✓   │
-│ 5 │ 16 MB  │ 1 │      35.9 │    ±1.6 │   0.0 MB │ 16.3  │    14.0    │   ✗   │
-│ 5 │ 16 MB  │ 2 │      29.5 │    ±0.7 │   0.0 MB │ 17.3  │    15.0    │   ✗   │
-│ 5 │ 16 MB  │ 4 │      16.4 │    ±0.4 │   0.0 MB │ 18.3  │    16.0    │   ✗   │
-│ 5 │ 64 MB  │ 1 │     179.2 │    ±3.8 │   0.0 MB │ 18.3  │    16.0    │   ✓   │
-│ 5 │ 64 MB  │ 2 │     139.7 │    ±5.4 │   0.0 MB │ 19.3  │    17.0    │   ✓   │
-│ 5 │ 64 MB  │ 4 │      77.4 │    ±1.7 │   0.0 MB │ 20.3  │    18.0    │   ✓   │
-│ 5 │ 128 MB │ 1 │     379.8 │   ±10.5 │   0.0 MB │ 19.3  │    17.0    │   ✓   │
-│ 5 │ 128 MB │ 2 │     271.1 │    ±7.1 │   0.0 MB │ 20.3  │    18.0    │   ✓   │
-│ 5 │ 128 MB │ 4 │     152.2 │    ±3.6 │   0.0 MB │ 21.3  │    19.0    │   ✓   │
-╰───┴────────┴───┴───────────┴─────────┴──────────┴───────┴────────────┴───────╯
-
-scrypt
-╭─────────┬───┬───┬───────────┬───────────────┬───────┬───────╮
-│       N │ r │ p │ Mean (ms) │ Théorique RAM │ Score │ OWASP │
-├─────────┼───┼───┼───────────┼───────────────┼───────┼───────┤
-│  16,384 │ 8 │ 1 │      28.3 │       16.0 MB │ 17.0  │   ✗   │
-│  65,536 │ 8 │ 1 │       0.0 │       64.0 MB │ 17.0  │   ✓   │
-│ 131,072 │ 8 │ 2 │       0.0 │      256.0 MB │ 17.0  │   ✓   │
-╰─────────┴───┴───┴───────────┴───────────────┴───────┴───────╯
-
-PBKDF2-SHA256 (référence)
-                                          
-  Iterations   Mean (ms)   Score   OWASP  
- ──────────────────────────────────────── 
-     100,000        21.1   16.6      ✗    
-     300,000        62.5   18.2      ✗    
-     600,000       125.2   19.2      ✓    
-                                          
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  MEMORY SUITE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-╭───────────────┬──────────┬──────────┬────────────┬───────────┬────────╮
-│    Vault Size │ Peak RAM │ MB/entry │ Build (ms) │ Entries/s │ Fragm. │
-├───────────────┼──────────┼──────────┼────────────┼───────────┼────────┤
-│    10 entries │  0.01 MB │  0.00105 │        0.0 │    417798 │   1.4% │
-│   100 entries │  0.10 MB │  0.00102 │        0.5 │    202345 │   0.1% │
-│ 1,000 entries │  1.02 MB │  0.00102 │        2.3 │    429904 │   0.0% │
-│     0 entries │  0.00 MB │  0.00000 │        0.0 │         0 │   0.0% │
-╰───────────────┴──────────┴──────────┴────────────┴───────────┴────────╯
-
-Cache Analysis  Cold: 0.450ms  Hot: 0.048ms  Speedup: 9.4x
+╭───────────────────────────────────────────────────── CAGOULE-BENCH v2.2.0 ──────────────────────────────────────────────────────╮
+│ cagoule-bench v2.2.0  |  x86_64  |  3.12.3  |  matrix: ?  omega: ?  |  2026-06-14 16:32 UTC                                     │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   STREAMING SUITE
@@ -345,19 +295,130 @@ Cache Analysis  Cold: 0.450ms  Hot: 0.048ms  Speedup: 9.4x
 ╭────────────────────────┬───────────────────┬────────────┬───────────┬───────┬──────────╮
 │ Test                   │ Algorithm         │ Throughput │ Mean (ms) │ Chunk │ RAM eff. │
 ├────────────────────────┼───────────────────┼────────────┼───────────┼───────┼──────────┤
-│ stream-encrypt-50MB    │ AES-256-GCM       │ 455.9 MB/s │       110 │ 64 KB │ O(chunk) │
-│ stream-encrypt-50MB    │ ChaCha20-Poly1305 │ 403.2 MB/s │       124 │ 64 KB │ O(chunk) │
-│ stream-encrypt-50MB    │ CAGOULE           │   7.9 MB/s │      6332 │ 64 KB │ O(total) │
-│ stream-encrypt-100MB   │ AES-256-GCM       │ 456.6 MB/s │       219 │ 64 KB │ O(chunk) │
-│ stream-encrypt-100MB   │ ChaCha20-Poly1305 │ 401.5 MB/s │       249 │ 64 KB │ O(chunk) │
-│ stream-encrypt-100MB   │ CAGOULE           │   7.9 MB/s │     12705 │ 64 KB │ O(chunk) │
-│ stream-encrypt-500MB   │ AES-256-GCM       │ 458.3 MB/s │      1091 │ 64 KB │ O(chunk) │
-│ stream-encrypt-500MB   │ ChaCha20-Poly1305 │ 403.1 MB/s │      1240 │ 64 KB │ O(chunk) │
-│ stream-encrypt-500MB   │ CAGOULE           │   7.8 MB/s │     63832 │ 64 KB │ O(chunk) │
+│ stream-encrypt-50MB    │ AES-256-GCM       │ 459.6 MB/s │       109 │ 64 KB │ O(chunk) │
+│ stream-encrypt-50MB    │ ChaCha20-Poly1305 │ 403.1 MB/s │       124 │ 64 KB │ O(chunk) │
+│ stream-encrypt-50MB    │ CAGOULE-CBC       │  21.8 MB/s │      2294 │ 64 KB │ O(chunk) │
+│ stream-encrypt-50MB    │ CAGOULE-CTR       │  21.9 MB/s │      2287 │ 64 KB │ O(chunk) │
+│ stream-encrypt-100MB   │ AES-256-GCM       │ 459.0 MB/s │       218 │ 64 KB │ O(chunk) │
+│ stream-encrypt-100MB   │ ChaCha20-Poly1305 │ 402.8 MB/s │       248 │ 64 KB │ O(chunk) │
+│ stream-encrypt-100MB   │ CAGOULE-CBC       │  21.8 MB/s │      4593 │ 64 KB │ O(chunk) │
+│ stream-encrypt-100MB   │ CAGOULE-CTR       │  21.7 MB/s │      4604 │ 64 KB │ O(chunk) │
+│ stream-encrypt-500MB   │ AES-256-GCM       │ 457.3 MB/s │      1093 │ 64 KB │ O(chunk) │
+│ stream-encrypt-500MB   │ ChaCha20-Poly1305 │ 396.4 MB/s │      1261 │ 64 KB │ O(chunk) │
+│ stream-encrypt-500MB   │ CAGOULE-CBC       │  21.7 MB/s │     23044 │ 64 KB │ O(chunk) │
+│ stream-encrypt-500MB   │ CAGOULE-CTR       │  21.7 MB/s │     23065 │ 64 KB │ O(chunk) │
 ╰────────────────────────┴───────────────────┴────────────┴───────────┴───────┴──────────╯
 Streaming: lecture chunked → chiffrement → sortie — RAM = O(chunk) idéalement
 
 ✓ Pas de régression 
   0 benchmarks OK vs historique (N≥5).
-  → Historique : run_id=8de05714... sauvegardé dans .cagoule_bench/history.db
-(venv) slim@slim:~/Documents/Cagoule/cagoule-bench/cagoule-bench-v2.0.0/cagoule-bench$
+  → Historique : run_id=fbd46da7... sauvegardé dans .cagoule_bench/history.db
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$
+
+
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0$ cd cagoule-bench-v2
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ git add bench/suites/ctr_suite.py
+git commit -m "Fix bulk CTR: true KDF amortization vs individual full KDF"
+git push origin main
+cagoule-bench run --suite ctr --iterations 5 --warmup 2 --format console
+[main 9ba0533] Fix bulk CTR: true KDF amortization vs individual full KDF
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+Énumération des objets: 9, fait.
+Décompte des objets: 100% (9/9), fait.
+Compression par delta en utilisant jusqu'à 20 fils d'exécution
+Compression des objets: 100% (5/5), fait.
+Écriture des objets: 100% (5/5), 502 octets | 502.00 KiO/s, fait.
+Total 5 (delta 4), réutilisés 0 (delta 0), réutilisés du paquet 0 (depuis 0)
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+To https://github.com/slimissa/cagoule-bench-v2
+   8b7132c..9ba0533  main -> main
+  → Config chargée depuis : 
+/home/slim/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2/cagoule_bench.toml
+
+────────────────────────────────────────────────────── cagoule-bench v2.2.0 ───────────────────────────────────────────────────────
+  Platform: x86_64  Python: 3.12.3  CAGOULE: 3.0.0  matrix: avx2  omega: C
+  Suites: ctr  Iterations: 5  Warmup: 2  Tag: default
+
+  ✓ ctr — 41 benchmarks
+
+──────────────────────────────────────────────── Terminé en 308.3s — 41 résultats ─────────────────────────────────────────────────
+
+
+╭───────────────────────────────────────────────────── CAGOULE-BENCH v2.2.0 ──────────────────────────────────────────────────────╮
+│ cagoule-bench v2.2.0  |  x86_64  |  3.12.3  |  matrix: ?  omega: ?  |  2026-06-15 21:54 UTC                                     │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CTR SUITE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CTR vs CBC — Throughput Comparison
+╭──────┬────────────┬────────────┬─────────┬────────╮
+│ Size │ CTR (MB/s) │ CBC (MB/s) │ Speedup │ CTR ms │
+├──────┼────────────┼────────────┼─────────┼────────┤
+│ 10MB │       21.4 │        6.8 │    ×3.1 │ 468.38 │
+│ 1KB  │       13.5 │        3.0 │    ×4.4 │   0.07 │
+│ 1MB  │       22.1 │        7.0 │    ×3.1 │  45.21 │
+│ 64KB │       22.3 │        8.1 │    ×2.7 │   2.80 │
+│ 8KB  │       14.2 │        6.9 │    ×2.0 │   0.55 │
+╰──────┴────────────┴────────────┴─────────┴────────╯
+CTR target: >15 MB/s Python e2e
+
+CTR Pipeline 4x — Auto-dispatch
+                                    
+  Size      Throughput   Mean (ms)  
+ ────────────────────────────────── 
+  128B 4x     2.4 MB/s        0.05  
+  4KB 4x     11.1 MB/s        0.35  
+  64KB 4x    22.4 MB/s        2.79  
+  1MB 4x     21.9 MB/s       45.61  
+                                    
+4x pipeline activates for messages ≥ 128 bytes (8 blocks)
+
+CTR Symmetry — encrypt = decrypt
+                                                  
+  Size   Encrypt (MB/s)   Decrypt (MB/s)   Ratio  
+ ──────────────────────────────────────────────── 
+  64KB             12.3             19.9   1.62×  
+  1MB              21.2             22.0   1.04×  
+                                                  
+
+CBC → CTR Migration Cost
+                                 
+  Size   Time (ms)   Throughput  
+ ─────────────────────────────── 
+  1KB        230.1     0.0 MB/s  
+  64KB       238.6     0.3 MB/s  
+  1MB        347.7     2.9 MB/s  
+                                 
+
+Bulk CTR — KDF Amortization
+╭──────────┬───────────┬─────────────────┬────────┬───────────╮
+│ Messages │ Bulk (ms) │ Individual (ms) │   Gain │ KDF calls │
+├──────────┼───────────┼─────────────────┼────────┼───────────┤
+│        1 │       2.8 │           116.9 │ 42.07× │  1 vs 1   │
+│        5 │      13.9 │           590.7 │ 42.40× │  1 vs 5   │
+│       10 │      28.0 │          1186.6 │ 42.42× │  1 vs 10  │
+│       50 │     140.1 │          5983.7 │ 42.70× │  1 vs 50  │
+│      100 │     281.4 │         11857.7 │ 42.14× │ 1 vs 100  │
+╰──────────┴───────────┴─────────────────┴────────┴───────────╯
+Bulk: 1 Argon2id derivation shared across N messages
+
+✗ RÉGRESSION DÉTECTÉE 
+    RÉGRESSION ctr/ctr-encrypt-1KB/CAGOULE-CTR: baseline_avg=14.7 → current=13.5 MB/s (-8.4% < seuil -5%) [N=5]
+    RÉGRESSION ctr/cbc-encrypt-1KB/CAGOULE-CBC: baseline_avg=4.5 → current=3.0 MB/s (-32.8% < seuil -5%) [N=5]
+    RÉGRESSION ctr/ctr-decrypt-1KB/CAGOULE-CTR: baseline_avg=8.7 → current=6.1 MB/s (-29.9% < seuil -5%) [N=5]
+    RÉGRESSION ctr/ctr-encrypt-8KB/CAGOULE-CTR: baseline_avg=15.0 → current=14.2 MB/s (-5.3% < seuil -5%) [N=5]
+    RÉGRESSION ctr/ctr-decrypt-8KB/CAGOULE-CTR: baseline_avg=13.5 → current=9.9 MB/s (-26.8% < seuil -5%) [N=5]
+    RÉGRESSION ctr/ctr-auto-128B/CAGOULE-CTR-auto: baseline_avg=2.6 → current=2.4 MB/s (-6.1% < seuil -5%) [N=5]
+    RÉGRESSION ctr/ctr-auto-4KB/CAGOULE-CTR-auto: baseline_avg=15.2 → current=11.1 MB/s (-27.1% < seuil -5%) [N=5]
+    RÉGRESSION ctr/ctr-sym-encrypt-64KB/CAGOULE-CTR-symmetry-enc: baseline_avg=22.5 → current=12.3 MB/s (-45.2% < seuil -5%) [N=5]
+    RÉGRESSION ctr/ctr-sym-decrypt-64KB/CAGOULE-CTR-symmetry-dec: baseline_avg=22.4 → current=19.9 MB/s (-11.1% < seuil -5%) [N=5]
+    RÉGRESSION ctr/ctr-sym-encrypt-1MB/CAGOULE-CTR-symmetry-enc: baseline_avg=22.4 → current=21.2 MB/s (-5.5% < seuil -5%) [N=5]
+    RÉGRESSION ctr/individual-ctr-1msgs/CAGOULE-individual-CTR: baseline_avg=22.3 → current=0.5 MB/s (-97.6% < seuil -5%) [N=5]
+    RÉGRESSION ctr/individual-ctr-5msgs/CAGOULE-individual-CTR: baseline_avg=22.4 → current=0.5 MB/s (-97.6% < seuil -5%) [N=5]
+    RÉGRESSION ctr/individual-ctr-10msgs/CAGOULE-individual-CTR: baseline_avg=22.5 → current=0.5 MB/s (-97.7% < seuil -5%) [N=5]
+    RÉGRESSION ctr/individual-ctr-50msgs/CAGOULE-individual-CTR: baseline_avg=22.5 → current=0.5 MB/s (-97.7% < seuil -5%) [N=5]
+    RÉGRESSION ctr/individual-ctr-100msgs/CAGOULE-individual-CTR: baseline_avg=22.5 → current=0.5 MB/s (-97.7% < seuil -5%) [N=5]
+  → Historique : run_id=5ea349d6... sauvegardé dans .cagoule_bench/history.db
+(.venv) slim@slim:~/Documents/Cagoule/cagoule/CAGOULE_v3_0_0_release/CAGOULE_v3_0_0/cagoule-bench-v2$ 

@@ -1,6 +1,6 @@
 """
-format.py — Sérialisation / désérialisation CGL1 — CAGOULE v3.0.0
-CTR v0x02 support added.
+format.py — Sérialisation / désérialisation CGL1 — CAGOULE v2.5.0
+Identique à v1.x.
 """
 from __future__ import annotations
 from dataclasses import dataclass
@@ -8,7 +8,6 @@ from dataclasses import dataclass
 MAGIC           = b'CGL1'
 MAGIC_HEX       = 0x43474C31
 VERSION_BYTE    = 0x01
-VERSION_CTR = 0x02
 VERSION         = bytes([VERSION_BYTE])
 MAGIC_SIZE      = 4
 VERSION_SIZE    = 1
@@ -17,7 +16,7 @@ NONCE_SIZE      = 12
 TAG_SIZE        = 16
 HEADER_SIZE     = MAGIC_SIZE + VERSION_SIZE + SALT_SIZE + NONCE_SIZE   # 49
 OVERHEAD        = HEADER_SIZE + TAG_SIZE                                # 65
-SUPPORTED_VERSIONS = {0x01, 0x02}
+SUPPORTED_VERSIONS = {0x01}
 
 class CGL1FormatError(Exception):
     pass
