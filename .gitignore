@@ -37,3 +37,7 @@ htmlcov/
 # Release archives
 *.zip
 *.tar.gz
+
+# Release archives — keep out of repo
+CAGOULE_*/
+cagoule v*/
