@@ -100,16 +100,15 @@ def migrate_cbc_to_ctr(ciphertext_cbc: bytes, password: bytes,
     Migration d'un ciphertext CGL1 v0x01 (CBC) vers v0x02 (CTR).
 
     Déchiffre avec CBC, rechiffre avec CTR.
-    Le plaintext intermédiaire est zéroïsé après usage.
+    Le plaintext intermédiaire est zéroïsé via SensitiveBuffer.
     """
-    # Déchiffrer CBC
+    from .utils import SensitiveBuffer
+    
     plaintext = _decrypt_cbc_raw(ciphertext_cbc, password, fast_mode=fast_mode)
-    # Rechiffrer CTR
-    result = encrypt_ctr(plaintext, password, fast_mode=fast_mode)
-    # Zéroïser le plaintext intermédiaire
-    pt_ba = bytearray(plaintext)
-    for i in range(len(pt_ba)):
-        pt_ba[i] = 0
+    
+    with SensitiveBuffer.from_bytes(plaintext) as pt_buf:
+        result = encrypt_ctr(bytes(pt_buf), password, fast_mode=fast_mode)
+    
     return result
 
 

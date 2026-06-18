@@ -133,10 +133,9 @@ static void test_ctr_keystream_ct(void) {
     volatile uint64_t w = 0;
     for (int i = 0; i < 1000000; i++) w += i;
     
-    for (int pi = 0; pi < 4; pi++) {  /* 4 primes for speed */
+    for (int pi = 0; pi < 4; pi++) {
         uint64_t p = CAGOULE_MERSENNE_P[pi];
         
-        /* Build test matrix + sbox */
         uint64_t nodes[16];
         for (int i = 0; i < 16; i++)
             nodes[i] = (uint64_t)(2 + i * 1000000007ULL + pi * 17ULL);
@@ -154,7 +153,6 @@ static void test_ctr_keystream_ct(void) {
         for (int i = 0; i < 64; i++)
             rk[i] = (uint64_t)((i + 1) * 0xABCDEF0123456789ULL) % p;
         
-        /* Fixed IV */
         uint8_t iv[8];
         for (int i = 0; i < 8; i++)
             iv[i] = (uint8_t)(0x30 + pi * 7 + i * 13);
@@ -162,28 +160,22 @@ static void test_ctr_keystream_ct(void) {
         double *fa = malloc(N * sizeof(double));
         double *fb = malloc(N * sizeof(double));
         
-        /* Class A: fixed IV, fixed start_bi = 0, fixed n_blocks = 1 */
-        {
-            uint8_t ks[16];
-            for (int i = 0; i < N; i++) {
-                uint64_t t0 = rdtsc();
-                _ct_ctr_keystream(iv, 0, mat, &sbox, rk, 64, p, ks, 1);
-                fa[i] = (double)(rdtsc() - t0);
-                volatile uint8_t sink = ks[0]; (void)sink;
-            }
-        }
+        /* FIXED n_blocks = 1 for BOTH classes — equal work, interleaved */
+        uint8_t ks[16];
         
-        /* Class B: random start_bi and random n_blocks (1..4) */
-        {
-            for (int i = 0; i < N; i++) {
-                size_t start_bi = (size_t)(rand() % 1000);
-                size_t n_blocks = (size_t)((rand() % 4) + 1);
-                uint8_t ks[64];  /* max 4 blocks = 64 bytes */
-                uint64_t t0 = rdtsc();
-                _ct_ctr_keystream(iv, start_bi, mat, &sbox, rk, 64, p, ks, n_blocks);
-                fb[i] = (double)(rdtsc() - t0);
-                volatile uint8_t sink = ks[0]; (void)sink;
-            }
+        for (int i = 0; i < N; i++) {
+            /* Class A: fixed start_bi = 0 */
+            uint64_t t0 = rdtsc();
+            _ct_ctr_keystream(iv, 0, mat, &sbox, rk, 64, p, ks, 1);
+            fa[i] = (double)(rdtsc() - t0);
+            volatile uint8_t sink_a = ks[0]; (void)sink_a;
+            
+            /* Class B: random start_bi — interleaved to cancel drift */
+            size_t start_bi = (size_t)(rand() % 1000);
+            t0 = rdtsc();
+            _ct_ctr_keystream(iv, start_bi, mat, &sbox, rk, 64, p, ks, 1);
+            fb[i] = (double)(rdtsc() - t0);
+            volatile uint8_t sink_b = ks[0]; (void)sink_b;
         }
         
         char nm[32];
