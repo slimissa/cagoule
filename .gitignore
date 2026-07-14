@@ -65,3 +65,8 @@ Thumbs.db
 *.key
 *.pem
 *.p12
+
+# Release archives — keep out of repo
+CAGOULE_*/
+cagoule v*/
+*.zip
