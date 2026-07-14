@@ -1,0 +1,12 @@
+{
+  "tests/test_kat.py::TestKATParameters::test_n_zeta": true,
+  "tests/test_kat.py::TestKATParameters::test_prime_p": true,
+  "tests/test_kat.py::TestKATParameters::test_mu_strategy": true,
+  "tests/test_kat.py::TestKATParameters::test_k_stream": true,
+  "tests/test_kat.py::TestKATParameters::test_round_key_0": true,
+  "tests/test_kat.py::TestKATParameters::test_round_key_63": true,
+  "tests/test_kat.py::TestKATCipher::test_cgl1_sha256": true,
+  "tests/test_kat.py::TestKATCipher::test_cgl1_hex": true,
+  "tests/test_kat.py::TestKATRoundTrip::test_decrypt_kat_cgl1": true,
+  "tests/test_kat.py::TestKATRoundTrip::test_decrypt_with_params": true
+}
