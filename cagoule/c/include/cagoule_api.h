@@ -73,6 +73,7 @@
 #define CAGOULE_API_ERR_SIZE     -2
 #define CAGOULE_API_ERR_AUTH     -3   /* Échec vérification MAC */
 #define CAGOULE_API_ERR_FORMAT   -4   /* Magic/version invalide */
+#define CAGOULE_API_ERR_EXPERIMENTAL_DISABLED (-8) /* mode expérimental non activé */
 #define CAGOULE_API_ERR_KDF      -5
 #define CAGOULE_API_ERR_CRYPTO   -6   /* Échec OpenSSL EVP interne */
 #define CAGOULE_API_ERR_ALLOC    -7
