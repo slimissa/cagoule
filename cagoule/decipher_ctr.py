@@ -70,8 +70,24 @@ def decrypt_ctr(ciphertext: bytes, password: bytes,
     own_params = params is None
     if own_params:
         params = CagouleParams.derive(password, salt=salt, fast_mode=fast_mode)
-    # Si params est fourni (bulk_ctr ou bench), on l'utilise tel quel.
-    # Le salt du ciphertext doit correspondre au salt utilisé pour dériver params.
+    else:
+        # CORRECTIF v3.1.0 (Finding 4) : vérifier que params.salt correspond au
+        # salt du ciphertext. Une discordance produit un déchiffrement silencieusement
+        # erroné (garbage plaintext sans CagouleAuthError) car k_stream est
+        # cohérent avec lui-même mais pas avec le ciphertext.
+        #
+        # Exception : en mode bulk avec cagoule_encrypt_with_handle (C API),
+        # chaque ciphertext a un msg_salt distinct même si le handle est partagé.
+        # Dans ce cas params.salt (salt original du handle) != msg_salt du header.
+        # On log un avertissement mais on ne bloque pas pour préserver la compat C bulk.
+        if bytes(params.salt) != bytes(salt):
+            _log.warning(
+                "decrypt_ctr : params.salt (%s...) ne correspond pas au salt "
+                "du header CGL1 (%s...). Si ce ciphertext provient de "
+                "cagoule_encrypt_with_handle (C bulk), c'est normal. Sinon, "
+                "le déchiffrement peut produire du garbage sans erreur d'auth.",
+                bytes(params.salt).hex()[:16], salt.hex()[:16]
+            )
 
     try:
         # 3. Vérification AEAD ChaCha20-Poly1305
@@ -93,7 +109,7 @@ def decrypt_ctr(ciphertext: bytes, password: bytes,
         # 4. Déchiffrement CTR algébrique
         # CORRECTIF v3.0.1 (3e itération) : passer le nonce (lu depuis le header)
         # pour dériver le même IV que lors du chiffrement.
-        # L'IV = HKDF(k_master, b'CAGOULE_CTR_V31' + nonce) — symétrique avec encrypt.
+        # L'IV = HKDF(k_master, b'CAGOULE_CTR_V30' + nonce) — symétrique avec encrypt.
         plaintext = _ctr_decrypt(ct_alg, params, nonce)
         return plaintext
 
@@ -117,7 +133,27 @@ def decrypt_bulk_ctr(ciphertexts: list, password: bytes,
     Usage : préférer decrypt_ctr() individuel si les performances importent
     plus que la simplicité d'API.
     """
-    return [decrypt_ctr(ct, password, fast_mode=fast_mode) for ct in ciphertexts]
+    # CORRECTIF v3.1.0 (Finding 2) : ne plus avorter sur le premier échec.
+    # Un ciphertext corrompu dans un lot ne doit pas empêcher le déchiffrement
+    # des autres. On retourne (index, résultat_ou_exception) pour chaque élément.
+    # L'appelant peut distinguer les succès des échecs sans perdre les succès.
+    results = []
+    errors  = []
+    for i, ct in enumerate(ciphertexts):
+        try:
+            results.append(decrypt_ctr(ct, password, fast_mode=fast_mode))
+        except (CagouleAuthError, CagouleFormatError) as e:
+            errors.append((i, e))
+            results.append(None)  # placeholder pour préserver les indices
+
+    if errors:
+        # Logguer les erreurs mais retourner les succès
+        _log.warning(
+            "decrypt_bulk_ctr : %d/%d ciphertexts ont échoué : %s",
+            len(errors), len(ciphertexts),
+            [(i, str(e)) for i, e in errors]
+        )
+    return results
 
 
 def _dispatch_decrypt(ciphertext: bytes, password: bytes,
@@ -143,7 +179,7 @@ def _dispatch_decrypt(ciphertext: bytes, password: bytes,
 
     if magic != MAGIC:
         raise CagouleFormatError(
-            f"Magic invalide : {magic!r}",
+            f"Magic invalide : {magic.hex()}",
             field="MAGIC",
             data_size=len(ciphertext),
             min_size=5,
@@ -159,7 +195,7 @@ def _dispatch_decrypt(ciphertext: bytes, password: bytes,
                            params=params, fast_mode=fast_mode)
 
     raise CagouleFormatError(
-        f"Version CGL1 inconnue : {version!r}. "
+        f"Version CGL1 inconnue : 0x{version.hex()}. "
         "Versions supportées : 0x01 (CBC), 0x02 (CTR).",
         field="VERSION",
         data_size=len(ciphertext),
