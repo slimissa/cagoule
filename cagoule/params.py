@@ -71,6 +71,16 @@ def derive_k_master(password, salt, fast_mode=False):
     if len(salt) != SALT_SIZE:
         raise ValueError(f"Salt doit faire {SALT_SIZE} octets, reçu {len(salt)}")
     try:
+        # CORRECTIF v3.1.0 (Finding 4) : fast_mode appliqué aussi au chemin Argon2id.
+        # Avant ce correctif, fast_mode=True était silencieusement ignoré quand
+        # argon2-cffi était installé → tests mesurant le coût KDF + chiffrement
+        # voyaient toujours le coût KDF complet, rendant les benchmarks trompeurs.
+        from argon2.low_level import hash_secret_raw, Type
+        if fast_mode:
+            # Paramètres réduits pour tests : ~3ms au lieu de ~113ms
+            return hash_secret_raw(secret=password, salt=salt,
+                                   time_cost=1, memory_cost=8192,
+                                   parallelism=1, hash_len=K_MASTER_SIZE, type=Type.ID)
         return _kdf_argon2id(password, salt)
     except ImportError:
         n = _SCRYPT_N_TEST if fast_mode else _SCRYPT_N_PROD
@@ -140,7 +150,7 @@ def _derive_nodes(k_master, mu, n, p):
 
 class CagouleParams:
     """
-    Paramètres CAGOULE v3.1.0.
+    Paramètres CAGOULE v2.5.0.
 
     Nouveautés v2.5.0 :
       - Pool Mersenne-64 (8 premiers p = 2^64-k), sélection HKDF.
@@ -200,7 +210,13 @@ class CagouleParams:
         params.mu = generate_mu(params.p, timeout_s=timeout_mu)
         _log.info("µ — strat=%s in_fp2=%s", params.mu.strategy, params.mu.in_fp2)
 
-        delta        = hkdf_int(params.k_master, b'CAGOULE_DELTA', 8) % params.p
+        # CORRECTIF v3.1.0 (Finding 5 sbox.c cross-fix) : contraindre delta à [1, p-1]
+        # pour éviter delta==0 qui rendrait le S-box constant (feistel(x,0) = 0).
+        # En C, cagoule_sbox_init remplace silencieusement rk==0 par 1.
+        # Ici on garantit que la couche Python dérive la même valeur que le C
+        # en évitant 0 à la source plutôt qu'en corrigeant silencieusement.
+        raw_delta    = hkdf_int(params.k_master, b'CAGOULE_DELTA', 8)
+        delta        = (raw_delta % (params.p - 1)) + 1  # ∈ [1, p-1]
         params.sbox  = SBox.from_delta(delta, params.p)
 
         nodes             = _derive_nodes(params.k_master, params.mu, BLOCK_SIZE_N, params.p)
@@ -245,6 +261,20 @@ class CagouleParams:
         _BENCHMARK_CACHE.clear()
 
     def zeroize(self) -> None:
+        """Tente d'effacer le matériel de clé de la mémoire du processus.
+
+        LIMITATION CONNUE (Bug 4 / Finding 1) : k_master et k_stream sont des
+        objets bytes Python immuables. bytearray(self.k_master) crée une COPIE —
+        secure_zeroize efface la copie, pas l'original. L'objet bytes original
+        reste en mémoire jusqu'à ce que le GC CPython le réutilise.
+
+        Fix complet prévu v3.2.0 : stocker k_master/k_stream comme
+        ctypes.create_string_buffer dès la dérivation → zéroisation réelle.
+
+        Mitigation actuelle : appeler params.zeroize() le plus tôt possible
+        pour minimiser la fenêtre d'exposition, et utiliser le context manager
+        (with params:) pour garantir l'appel même en cas d'exception.
+        """
         from .utils import secure_zeroize
         if self.k_master:
             _buf = bytearray(self.k_master)
