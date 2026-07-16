@@ -95,9 +95,14 @@ int cagoule_kdf_hkdf(const uint8_t *ikm, size_t ikm_len,
 
     uint8_t prk[CAGOULE_SHA256_LEN];
     int ret = hkdf_extract(ikm, ikm_len, prk);
-    if (ret != CAGOULE_KDF_OK) return ret;
+    if (ret != CAGOULE_KDF_OK) {
+        OPENSSL_cleanse(prk, CAGOULE_SHA256_LEN);  // ← add
+        return ret;
+    }
 
-    return hkdf_expand(prk, info, info_len, out, out_len);
+    ret = hkdf_expand(prk, info, info_len, out, out_len);
+    OPENSSL_cleanse(prk, CAGOULE_SHA256_LEN);  // ← add
+    return ret;
 }
 
 int cagoule_kdf_hkdf_u64(const uint8_t *ikm, size_t ikm_len,
