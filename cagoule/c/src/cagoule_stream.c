@@ -67,8 +67,10 @@ static int derive_chunk_iv(const uint8_t k_master[CAGOULE_K_MASTER_LEN],
                              uint64_t chunk_idx,
                              uint8_t iv_out[CAGOULE_CTR_IV_SIZE])
 {
-    uint8_t info[15 + 8]; /* "CAGOULE_CTR_V30"(15) + chunk_idx(8) */
-    memcpy(info, "CAGOULE_CTR_V30", 15);
+    /* CORRECTIF v3.1.0 : label V30→V31 pour cohérence avec cagoule_api.c et
+     * cipher_ctr.py. Le chunk_idx joue le rôle du nonce (unique par chunk). */
+    uint8_t info[15 + 8]; /* "CAGOULE_CTR_V31"(15) + chunk_idx(8) */
+    memcpy(info, "CAGOULE_CTR_V31", 15);
     for (int i = 0; i < 8; i++) info[15 + i] = (uint8_t)(chunk_idx >> (i*8));
     return cagoule_kdf_hkdf(k_master, CAGOULE_K_MASTER_LEN, info, sizeof(info),
                              iv_out, CAGOULE_CTR_IV_SIZE) == CAGOULE_KDF_OK
@@ -151,11 +153,17 @@ CagouleStreamCtx* cagoule_stream_init(const uint8_t *password, size_t pwd_len,
     if (!password) return NULL;
 
     /* Double gate pour le mode expérimental 0x03 */
+    /* CORRECTIF v3.1.0 (Finding 3) : allow_experimental=1 sans env var →
+     * mode sûr par défaut (experimental=0), pas NULL. Le NULL ne doit être
+     * retourné que si l'appelant a explicitement demandé le mode expérimental
+     * ET que le gate env var n'est pas ouvert — ce n'est pas le cas ici :
+     * allow_experimental signifie "je suis prêt à utiliser le mode expérimental
+     * si le gate est ouvert", pas "je le requiers impérativement". */
     int experimental = 0;
     if (allow_experimental) {
         const char *env = getenv("CAGOULE_EXPERIMENTAL_NO_AEAD");
         if (env && strcmp(env, "1") == 0) experimental = 1;
-        else return NULL; /* gate non franchie */
+        /* sinon : experimental reste 0 (mode sûr par défaut) */
     }
 
     CagouleStreamCtx *ctx = calloc(1, sizeof(CagouleStreamCtx));
@@ -206,11 +214,11 @@ CagouleStreamCtx* cagoule_stream_init_from_salt(const uint8_t *password, size_t 
 {
     if (!password || !session_salt) return NULL;
 
+    /* CORRECTIF v3.1.0 (Finding 4) : même correction que stream_init */
     int experimental = 0;
     if (allow_experimental) {
         const char *env = getenv("CAGOULE_EXPERIMENTAL_NO_AEAD");
         if (env && strcmp(env, "1") == 0) experimental = 1;
-        else return NULL;
     }
 
     CagouleStreamCtx *ctx = calloc(1, sizeof(CagouleStreamCtx));
