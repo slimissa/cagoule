@@ -39,13 +39,29 @@ struct CagouleKeyHandle {
  * des labels différents, rendant les ciphertexts mono-message et bulk mutuellement
  * indéchiffrables et laissant le chemin mono-message sans salt (two-time-pad actif).
  */
+/* CORRECTIF v3.1.0 — derive_iv lie l'IV au NONCE (12 octets, aléatoire par
+ * message), pas au salt (32 octets, identique pour tous les messages d'un
+ * handle partagé). Ce changement aligne cagoule_api.c sur le comportement de
+ * cipher_ctr.py v3.0.1 (fix définitif Bug 2).
+ *
+ * Formule unifiée C et Python :
+ *   IV = HKDF(k_master, "CAGOULE_CTR_V31" + nonce, 8)
+ *
+ * Le nonce (12 octets ChaCha20, os.urandom par appel) est :
+ *   - Déjà aléatoire et unique par message (garantit l'unicité de l'IV)
+ *   - Présent dans le header CGL1 → disponible côté decrypt
+ *   - Indépendant du salt Argon2id → pas de problème de concordance
+ *
+ * Le salt (32 octets) reste dans le header pour permettre la re-dérivation
+ * de k_master/k_stream cross-session (invariant CGL1 préservé).
+ */
 static int derive_iv(const uint8_t k_master[CAGOULE_K_MASTER_LEN],
-                     const uint8_t header_salt[SALT_SIZE],
+                     const uint8_t nonce[NONCE_SIZE],
                      uint8_t iv_out[CAGOULE_CTR_IV_SIZE])
 {
-    uint8_t info[15 + SALT_SIZE];   /* "CAGOULE_CTR_V30"(15) + salt(32) */
-    memcpy(info, "CAGOULE_CTR_V30", 15);
-    memcpy(info + 15, header_salt, SALT_SIZE);
+    uint8_t info[15 + NONCE_SIZE];  /* "CAGOULE_CTR_V31"(15) + nonce(12) */
+    memcpy(info, "CAGOULE_CTR_V31", 15);
+    memcpy(info + 15, nonce, NONCE_SIZE);
     uint8_t buf[CAGOULE_CTR_IV_SIZE];
     if (cagoule_kdf_hkdf(k_master, CAGOULE_K_MASTER_LEN,
                           info, sizeof(info),
@@ -191,11 +207,20 @@ int cagoule_encrypt_with_handle(CagouleKeyHandle* handle,
 
     CagouleDerivedParams *p = &handle->params;
 
+    /* CORRECTIF v3.1.0 : générer le nonce AVANT derive_iv (IV = f(nonce)).
+     * msg_salt frais dans le header → re-dérivation cross-session possible.
+     * handle->original_salt serait l'alternative pour la cohérence avec Python
+     * bulk, mais msg_salt frais + k_master partagé est le design C bulk correct
+     * (chaque message a son propre sel Argon2id virtuel dans le header). */
     uint8_t msg_salt[SALT_SIZE];
     if (1 != RAND_bytes(msg_salt, SALT_SIZE)) return CAGOULE_API_ERR_CRYPTO;
 
+    /* Nonce généré AVANT derive_iv — l'IV dépend du nonce (pas du salt) */
+    uint8_t nonce[NONCE_SIZE];
+    if (1 != RAND_bytes(nonce, NONCE_SIZE)) return CAGOULE_API_ERR_CRYPTO;
+
     uint8_t iv[CAGOULE_CTR_IV_SIZE];
-    int ret = derive_iv(p->k_master, msg_salt, iv);
+    int ret = derive_iv(p->k_master, nonce, iv);
     if (ret != CAGOULE_API_OK) return ret;
 
     /* ct_alg : pipeline algébrique CTR */
@@ -206,10 +231,6 @@ int cagoule_encrypt_with_handle(CagouleKeyHandle* handle,
                                     p->z_offset, CAGOULE_Z_OFFSET_N,
                                     ct_alg, pt_len > 0 ? pt_len : 1);
     if (cret != CAGOULE_OK) { free(ct_alg); return CAGOULE_API_ERR_CRYPTO; }
-
-    /* AEAD ChaCha20-Poly1305 sur ct_alg */
-    uint8_t nonce[NONCE_SIZE];
-    if (1 != RAND_bytes(nonce, NONCE_SIZE)) { free(ct_alg); return CAGOULE_API_ERR_CRYPTO; }
 
     uint8_t aad[MAGIC_LEN + 1 + SALT_SIZE];
     build_aad(CAGOULE_API_VERSION_AEAD, msg_salt, aad);
@@ -274,7 +295,7 @@ int cagoule_decrypt_with_handle(CagouleKeyHandle* handle,
 
     /* 2. Authentifié -> déchiffrement CTR algébrique vers le buffer appelant */
     uint8_t iv[CAGOULE_CTR_IV_SIZE];
-    int iret = derive_iv(p->k_master, msg_salt, iv);
+    int iret = derive_iv(p->k_master, nonce, iv);
     if (iret != CAGOULE_API_OK) {
         OPENSSL_cleanse(ct_alg, body_len);
         free(ct_alg);
@@ -311,7 +332,7 @@ int cagoule_encrypt_with_handle_raw(CagouleKeyHandle* handle, int allow_experime
                                      const uint8_t* pt, size_t pt_len,
                                      uint8_t* out, size_t* out_len)
 {
-    if (!experimental_gate_open(allow_experimental)) return CAGOULE_API_ERR_AUTH;
+    if (!experimental_gate_open(allow_experimental)) return CAGOULE_API_ERR_EXPERIMENTAL_DISABLED;
     if (!handle || !pt || !out || !out_len) return CAGOULE_API_ERR_NULL;
     size_t needed = cagoule_api_encrypt_raw_out_len(pt_len);
     if (*out_len < needed) return CAGOULE_API_ERR_SIZE;
@@ -335,7 +356,12 @@ int cagoule_encrypt_with_handle_raw(CagouleKeyHandle* handle, int allow_experime
                                     p->round_keys, CAGOULE_NUM_ROUND_KEYS, p->p,
                                     p->z_offset, CAGOULE_Z_OFFSET_N,
                                     out + pos, *out_len - pos - TAG_SIZE);
-    if (cret != CAGOULE_OK) return CAGOULE_API_ERR_CRYPTO;
+    if (cret != CAGOULE_OK) {
+        /* Zéroiser les octets déjà écrits dans out avant de retourner l'erreur
+         * (out+pos contient un ciphertext partiel non authentifié) */
+        OPENSSL_cleanse(out, *out_len);
+        return CAGOULE_API_ERR_CRYPTO;
+    }
 
     uint8_t aad[MAGIC_LEN + 1 + SALT_SIZE];
     build_aad(CAGOULE_API_VERSION_RAW, msg_salt, aad);
@@ -361,7 +387,7 @@ int cagoule_decrypt_with_handle_raw(CagouleKeyHandle* handle, int allow_experime
                                      const uint8_t* ct, size_t ct_len,
                                      uint8_t* out, size_t* out_len)
 {
-    if (!experimental_gate_open(allow_experimental)) return CAGOULE_API_ERR_AUTH;
+    if (!experimental_gate_open(allow_experimental)) return CAGOULE_API_ERR_EXPERIMENTAL_DISABLED;
     if (!handle || !ct || !out || !out_len) return CAGOULE_API_ERR_NULL;
     if (ct_len < CAGOULE_API_OVERHEAD_RAW) return CAGOULE_API_ERR_SIZE;
     if (memcmp(ct, MAGIC_BYTES, MAGIC_LEN) != 0) return CAGOULE_API_ERR_FORMAT;
@@ -394,6 +420,9 @@ int cagoule_decrypt_with_handle_raw(CagouleKeyHandle* handle, int allow_experime
         return CAGOULE_API_ERR_AUTH;  /* out n'est jamais touché */
     }
 
+    /* Mode RAW (0x03) : pas de nonce ChaCha20 dans le header. L'IV est dérivé
+     * depuis msg_salt (comme côté chiffrement raw). msg_salt joue ici le rôle
+     * du nonce pour l'unicité de l'IV (dérivé via HKDF(k_master, V31+msg_salt)). */
     uint8_t iv[CAGOULE_CTR_IV_SIZE];
     int iret = derive_iv(p->k_master, msg_salt, iv);
     if (iret != CAGOULE_API_OK) return iret;
@@ -428,8 +457,15 @@ int cagoule_encrypt_v3(const uint8_t* password, size_t pwd_len,
         != CAGOULE_PARAMS_OK)
         return CAGOULE_API_ERR_KDF;
 
+    /* CORRECTIF v3.1.0 : nonce généré avant derive_iv (IV = f(nonce)) */
+    uint8_t nonce[NONCE_SIZE];
+    if (1 != RAND_bytes(nonce, NONCE_SIZE)) {
+        cagoule_params_free(&params);
+        return CAGOULE_API_ERR_CRYPTO;
+    }
+
     uint8_t iv[CAGOULE_CTR_IV_SIZE];
-    int ret = derive_iv(params.k_master, salt, iv);
+    int ret = derive_iv(params.k_master, nonce, iv);
     if (ret != CAGOULE_API_OK) { cagoule_params_free(&params); return ret; }
 
     uint8_t *ct_alg = malloc(pt_len > 0 ? pt_len : 1);
@@ -439,9 +475,6 @@ int cagoule_encrypt_v3(const uint8_t* password, size_t pwd_len,
                                     params.z_offset, CAGOULE_Z_OFFSET_N,
                                     ct_alg, pt_len > 0 ? pt_len : 1);
     if (cret != CAGOULE_OK) { free(ct_alg); cagoule_params_free(&params); return CAGOULE_API_ERR_CRYPTO; }
-
-    uint8_t nonce[NONCE_SIZE];
-    if (1 != RAND_bytes(nonce, NONCE_SIZE)) { free(ct_alg); cagoule_params_free(&params); return CAGOULE_API_ERR_CRYPTO; }
 
     uint8_t aad[MAGIC_LEN + 1 + SALT_SIZE];
     build_aad(CAGOULE_API_VERSION_AEAD, salt, aad);
@@ -507,7 +540,7 @@ int cagoule_decrypt_v3(const uint8_t* password, size_t pwd_len,
     }
 
     uint8_t iv[CAGOULE_CTR_IV_SIZE];
-    int iret = derive_iv(params.k_master, salt, iv);
+    int iret = derive_iv(params.k_master, nonce, iv);
     if (iret != CAGOULE_API_OK) {
         OPENSSL_cleanse(ct_alg, body_len);
         free(ct_alg);
