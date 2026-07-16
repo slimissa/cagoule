@@ -50,6 +50,13 @@ CAGOULE_ERR_CORRUPT = -3
 # ── Localisation de libcagoule.so ─────────────────────────────────────
 
 def _find_lib() -> Optional[pathlib.Path]:
+    """Localise libcagoule.so.
+
+    CORRECTIF v3.1.0 (Finding 2) : ajout d'un fallback via ld.so (LD_LIBRARY_PATH,
+    /usr/local/lib, etc.) quand la bibliothèque n'est pas aux emplacements relatifs
+    connus. Cela permet à une installation via 'make install' (qui copie
+    libcagoule.so dans /usr/local/lib) de fonctionner sans LIBCAGOULE_PATH.
+    """
     candidates = [
         pathlib.Path(__file__).parent / "libcagoule.so",
         pathlib.Path(__file__).parent / "c" / "libcagoule.so",
@@ -60,7 +67,12 @@ def _find_lib() -> Optional[pathlib.Path]:
     for p in candidates:
         if p.exists():
             return p
+    # CORRECTIF : retourner un sentinel pour indiquer "chercher via ld.so"
+    # Le chargement ctypes.CDLL("libcagoule.so") sera tenté dans le bloc principal
     return None
+
+
+_LIBCAGOULE_SYSTEM_SEARCH = True  # Tenter la recherche ld.so si _find_lib() → None
 
 
 _lib_path = _find_lib()
@@ -77,13 +89,18 @@ if _lib_path is not None:
             "Fallback Python pur (performances v1.x).",
             RuntimeWarning, stacklevel=2
         )
-else:
-    warnings.warn(
-        "cagoule: libcagoule.so non trouvé. "
-        "Compiler : cd cagoule/c && make && make install. "
-        "Fallback Python pur actif.",
-        RuntimeWarning, stacklevel=2
-    )
+elif _LIBCAGOULE_SYSTEM_SEARCH:
+    # CORRECTIF v3.1.0 (Finding 2) : tentative via le linker dynamique système
+    try:
+        _lib = ctypes.CDLL("libcagoule.so")
+        CAGOULE_C_AVAILABLE = True
+    except OSError:
+        warnings.warn(
+            "cagoule: libcagoule.so non trouvé (ni chemins relatifs, ni ld.so). "
+            "Compiler : cd cagoule/c && make && make install. "
+            "Fallback Python pur actif.",
+            RuntimeWarning, stacklevel=2
+        )
 
 
 # ── Structures ctypes ─────────────────────────────────────────────────
