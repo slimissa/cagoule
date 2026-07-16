@@ -67,6 +67,10 @@ static inline void _build_counter_block(uint64_t bi, const uint8_t iv[8],
     blk[0] = iv[0]; blk[1] = iv[1]; blk[2] = iv[2]; blk[3] = iv[3];
     blk[4] = iv[4]; blk[5] = iv[5]; blk[6] = iv[6]; blk[7] = iv[7];
     /* Counter bi : big-endian uint64 → éléments [8..15] */
+    /* SÉCURITÉ : bi est uint64_t. Après 2^64 blocs (= 2^68 octets = 256 EiB),
+     * bi déborde à 0 → réutilisation du keystream (CTR counter wraparound).
+     * Limite documentée dans SECURITY.md. Re-dériver les paramètres avant
+     * d'atteindre 2^64 blocs par clé. */
     blk[ 8] = (bi >> 56) & 0xFF;
     blk[ 9] = (bi >> 48) & 0xFF;
     blk[10] = (bi >> 40) & 0xFF;
@@ -132,8 +136,12 @@ static void _ctr_one_block_avx2(uint64_t bi, const uint8_t iv[8],
     _sbox_block_forward_hot_avx2(sbox, tmp, blk, N);
 
     /* add round_key via addmod64x4 SIMD */
-    __m256i pv = _mm256_set1_epi64x((int64_t)p);
-    __m256i rv = _mm256_set1_epi64x((int64_t)rk[bi % nk]);
+    /* CORRECTIF v3.1.0 (Finding 1) : type-pun union pour éviter UBSan
+     * implicit-conversion sur les primes Mersenne-64 (> INT64_MAX). */
+    union { uint64_t u; int64_t s; } pun_p = { .u = p };
+    union { uint64_t u; int64_t s; } pun_rk = { .u = rk[bi % nk] };
+    __m256i pv = _mm256_set1_epi64x(pun_p.s);
+    __m256i rv = _mm256_set1_epi64x(pun_rk.s);
     for (int j = 0; j < N; j += 4) {
         __m256i b = _mm256_loadu_si256((const __m256i*)(blk + j));
         b = addmod64x4(b, rv, pv);
@@ -181,11 +189,17 @@ static void _ctr_four_blocks_avx2(uint64_t bi, const uint8_t iv[8],
     _sbox_block_forward_hot_avx2(sbox, tmp3, blk3, N);
 
     /* Round keys (broadcasts une seule fois par bloc) */
-    __m256i pv  = _mm256_set1_epi64x((int64_t)p);
-    __m256i rv0 = _mm256_set1_epi64x((int64_t)rk[(bi + 0) % nk]);
-    __m256i rv1 = _mm256_set1_epi64x((int64_t)rk[(bi + 1) % nk]);
-    __m256i rv2 = _mm256_set1_epi64x((int64_t)rk[(bi + 2) % nk]);
-    __m256i rv3 = _mm256_set1_epi64x((int64_t)rk[(bi + 3) % nk]);
+    /* CORRECTIF v3.1.0 (Finding 1) : type-pun union pour UBSan */
+    union { uint64_t u; int64_t s; } pun_p4 = { .u = p };
+    union { uint64_t u; int64_t s; } pun_rk0 = { .u = rk[(bi + 0) % nk] };
+    union { uint64_t u; int64_t s; } pun_rk1 = { .u = rk[(bi + 1) % nk] };
+    union { uint64_t u; int64_t s; } pun_rk2 = { .u = rk[(bi + 2) % nk] };
+    union { uint64_t u; int64_t s; } pun_rk3 = { .u = rk[(bi + 3) % nk] };
+    __m256i pv  = _mm256_set1_epi64x(pun_p4.s);
+    __m256i rv0 = _mm256_set1_epi64x(pun_rk0.s);
+    __m256i rv1 = _mm256_set1_epi64x(pun_rk1.s);
+    __m256i rv2 = _mm256_set1_epi64x(pun_rk2.s);
+    __m256i rv3 = _mm256_set1_epi64x(pun_rk3.s);
 
     for (int j = 0; j < N; j += 4) {
         __m256i b0 = _mm256_loadu_si256((const __m256i*)(blk0 + j));
