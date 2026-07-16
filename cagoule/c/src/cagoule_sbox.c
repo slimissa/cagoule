@@ -57,13 +57,22 @@ static inline uint64_t _feistel_pass_inv(uint64_t y, uint64_t rk0, uint64_t rk1)
 /* ── Inverse modulaire générique (Euclide étendu) pour fallback ──────
  * Calcule a^(-1) mod m (m non nécessairement premier)
  */
+/* CORRECTIF v3.1.0 (Finding 3) : l'ancienne implémentation utilisait int64_t
+ * pour des valeurs jusqu'à ~2^64 (primes Mersenne-64), causant un overflow
+ * implementation-defined. Cette fonction n'est appelée QUE sur le chemin
+ * use_feistel==0 (p < CAGOULE_SBOX_LARGE_PRIME_THRESHOLD = 2^32), donc jamais
+ * en production avec le pool Mersenne-64. Néanmoins, corrigée pour utiliser
+ * __int128 afin d'être correcte sur tous les inputs possibles.
+ *
+ * NOTE : si le support des petits premiers (p < 2^32) est définitivement retiré,
+ * supprimer cette fonction. */
 static uint64_t _invmod_generic(uint64_t a, uint64_t m) {
-    int64_t t = 0, newt = 1;
-    int64_t r = (int64_t)m, newr = (int64_t)a;
+    __int128 t = 0, newt = 1;
+    __int128 r = (__int128)m, newr = (__int128)a;
 
     while (newr != 0) {
-        int64_t q = r / newr;
-        int64_t tmp = newt;
+        __int128 q = r / newr;
+        __int128 tmp = newt;
         newt = t - q * newt;
         t = tmp;
         tmp = newr;
@@ -72,7 +81,7 @@ static uint64_t _invmod_generic(uint64_t a, uint64_t m) {
     }
 
     if (r > 1) return 0;   /* Pas d'inverse */
-    if (t < 0) t += m;
+    if (t < 0) t += (__int128)m;
     return (uint64_t)t;
 }
 
@@ -92,6 +101,12 @@ static uint64_t _find_d(uint64_t p) {
 
 void cagoule_sbox_init(CagouleSBox64* s, uint64_t p, uint64_t rk0, uint64_t rk1) {
     s->p = p;
+    /* CORRECTIF v3.1.0 (Finding 5) : rk0/rk1 ne peuvent pas être 0 car
+     * _feistel_f(x, 0) = (x * 0) % P32_PRIME = 0 (constante → pas de confusion).
+     * Remplacement silencieux par 1. La couche Python (params.py) doit dériver
+     * delta dans [1, p-1] pour éviter ce cas : voir fix params.py correspondant.
+     * Note : rk0/rk1 sont des clés de ronde dérivées de k_master via HKDF —
+     * la probabilité que HKDF produise exactement 0 est ~2^-64, négligeable. */
     s->rk0 = (rk0 == 0) ? 1 : (rk0 % CAGOULE_P32_PRIME);
     s->rk1 = (rk1 == 0) ? 1 : (rk1 % CAGOULE_P32_PRIME);
 
