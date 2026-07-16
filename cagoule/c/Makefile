@@ -1,12 +1,12 @@
-# Makefile — CAGOULE v3.0.1 libcagoule.so
+# Makefile — CAGOULE v3.1.0 libcagoule.so
 #
 # Cibles principales :
 #   make              → compile libcagoule.so (AVX2 si disponible)
 #   make tests        → exécute tous les tests C (scalaires + AVX2 + CTR)
 #   make test-avx2    → tests AVX2 uniquement
 #   make test-scalar  → force le chemin scalaire (CI sans AVX2)
-#   make test-ctr     → tests CTR uniquement (v3.0.1)
-#   make test-format  → tests format CGL1 (v3.0.1)
+#   make test-ctr     → tests CTR uniquement (v3.1.0)
+#   make test-format  → tests format CGL1 (v3.1.0)
 #   make test-ct      → test constant-time (dudect)
 #   make valgrind     → vérifie les fuites mémoire (inclut CTR)
 #   make debug        → compile avec ASan + UBSan
@@ -32,7 +32,7 @@ CFLAGS   = -O3 -funroll-loops -std=c99 -Wall -Wextra -fPIC -Iinclude
 CFLAGS  += -D_POSIX_C_SOURCE=200809L
 CFLAGS  += -Wno-aggressive-loop-optimizations
 LDFLAGS  = -shared
-LDLIBS   = -lm -lcrypto
+LDLIBS   = -lm -lcrypto -largon2
 
 PYTHON  ?= python3
 
@@ -65,7 +65,16 @@ SRCS     = src/cagoule_math.c \
            src/cagoule_sbox.c   \
            src/cagoule_cipher.c \
            src/cagoule_ctr.c \
-           src/cagoule_omega.c
+           src/cagoule_omega.c \
+           src/cagoule_api.c \
+           src/cagoule_kdf.c \
+           src/cagoule_params.c \
+           src/cagoule_stream.c
+
+# ── ARM NEON (v3.1.0 Feature 3) ─────────────────────────────────────
+ifeq ($(shell uname -m),aarch64)
+    SRCS += src/cagoule_matrix_neon.c
+endif
 
 # ── Modules AVX2 (compilés avec -mavx2 séparément) ─────────────────────
 ifeq ($(HAS_AVX2),yes)
@@ -102,7 +111,7 @@ all: $(LIB)
 
 $(LIB): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-	@echo "✓ $(LIB) compilé (CAGOULE v3.0.1)"
+	@echo "✓ $(LIB) compilé (CAGOULE v3.1.0)"
 
 %.o: %.c
 	$(CC) $(CFLAGS) -MMD -c $< -o $@
@@ -113,7 +122,7 @@ tests: $(LIB) test_math test_matrix test_sbox test_cipher test_omega test_ctr te
              test_math_avx2 test_matrix_avx2 test_sbox_avx2 test_cipher_pipeline4 test_mersenne
 	@echo ""
 	@echo "══════════════════════════════════════════════════════"
-	@echo "  Exécution des tests CAGOULE v3.0.1"
+	@echo "  Exécution des tests CAGOULE v3.1.0 (scalaires + AVX2 + CTR)"
 	@echo "══════════════════════════════════════════════════════"
 	@status=0; \
 	./test_mersenne        && echo "✓ test_mersenne        OK" || { echo "✗ test_mersenne        FAIL"; status=1; }; \
@@ -129,7 +138,7 @@ tests: $(LIB) test_math test_matrix test_sbox test_cipher test_omega test_ctr te
 	./test_sbox_avx2       && echo "✓ test_sbox_avx2       OK" || { echo "✗ test_sbox_avx2       FAIL"; status=1; }; \
 	./test_cipher_pipeline4 && echo "✓ test_cipher_pipeline4 OK" || { echo "✗ test_cipher_pipeline4 FAIL"; status=1; }; \
 	echo "══════════════════════════════════════════════════════"; \
-	[ $$status -eq 0 ] && echo "  ✅ Tous les tests passent (v3.0.1)" || echo "  ❌ Certains tests ont échoué"; \
+	[ $$status -eq 0 ] && echo "  ✅ Tous les tests passent (v3.1.0)" || echo "  ❌ Certains tests ont échoué"; \
 	echo "══════════════════════════════════════════════════════"; \
 	exit $$status
 
@@ -145,7 +154,7 @@ test-scalar: $(LIB) test_matrix_avx2 test_sbox_avx2
 
 test-ctr: $(LIB) test_ctr test_format
 	./test_ctr && ./test_format
-	@echo "✓ Tests CTR + format OK (v3.0.1)"
+	@echo "✓ Tests CTR + format OK (v3.1.0)"
 
 test-format: $(LIB) test_format
 	./test_format && echo "✓ test_format OK"
@@ -206,7 +215,7 @@ test-ct: $(LIB) test_constant_time
 bench: $(LIB) test_math test_matrix test_sbox test_omega test_ctr \
              test_matrix_avx2 test_sbox_avx2
 	@echo "══════════════════════════════════════════════════════"
-	@echo "  Benchmarks CAGOULE v3.0.1"
+	@echo "  Benchmarks CAGOULE v3.1.0 (scalaires + AVX2 + CTR)"
 	@echo "══════════════════════════════════════════════════════"
 	@./test_math && ./test_matrix && ./test_sbox && ./test_omega && ./test_ctr
 	@./test_matrix_avx2 && ./test_sbox_avx2
@@ -285,13 +294,13 @@ fuzz-long: fuzz_cipher
 # ── Aide ─────────────────────────────────────────────────────────────────
 help:
 	@echo "══════════════════════════════════════════════════════"
-	@echo "  CAGOULE v3.0.1 — Cibles disponibles"
+	@echo "  CAGOULE v3.1.0 — Cibles disponibles"
 	@echo "══════════════════════════════════════════════════════"
 	@echo "  make              → compile libcagoule.so"
 	@echo "  make tests        → tous les tests C (12 binaires)"
 	@echo "  make test-avx2    → tests AVX2 (Mersenne + matrice + S-box)"
 	@echo "  make test-scalar  → force fallback scalaire"
-	@echo "  make test-ctr     → tests CTR + format (v3.0.1)"
+	@echo "  make test-ctr     → tests CTR + format (v3.1.0)"
 	@echo "  make test-ct      → test constant-time (dudect)"
 	@echo "  make bench        → benchmarks de performance (inclut CTR)"
 	@echo "  make debug        → build avec ASan + UBSan"
