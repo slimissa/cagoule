@@ -1,5 +1,5 @@
 /**
- * cagoule_cipher.c — Pipeline CBC CAGOULE v2.5.4
+ * cagoule_cipher.c — Pipeline CBC CAGOULE v3.1.0
  *
  * v2.5.4 — Z-Domain Shifting inline (no malloc) :
  *   z_offset[16] ∈ Z/pZ transmis depuis Python.
@@ -141,8 +141,10 @@ static inline void _load_plain(const uint8_t* src, uint64_t bl[N],
 }
 
 static inline void _rk_add(uint64_t bl[N], uint64_t rk, uint64_t p) {
-    __m256i pv = _mm256_set1_epi64x((int64_t)p);
-    __m256i rv = _mm256_set1_epi64x((int64_t)rk);
+    union { uint64_t u; int64_t s; } pun_p = { .u = p };
+    union { uint64_t u; int64_t s; } pun_r = { .u = rk };
+    __m256i pv = _mm256_set1_epi64x(pun_p.s);
+    __m256i rv = _mm256_set1_epi64x(pun_r.s);
     for (int j = 0; j < N; j += 4) {
         __m256i b = _mm256_loadu_si256((const __m256i*)(bl+j));
         _mm256_storeu_si256((__m256i*)(bl+j), addmod64x4(b, rv, pv));
@@ -150,8 +152,10 @@ static inline void _rk_add(uint64_t bl[N], uint64_t rk, uint64_t p) {
 }
 
 static inline void _rk_sub(uint64_t bl[N], uint64_t rk, uint64_t p) {
-    __m256i pv = _mm256_set1_epi64x((int64_t)p);
-    __m256i rv = _mm256_set1_epi64x((int64_t)rk);
+    union { uint64_t u; int64_t s; } pun_p = { .u = p };
+    union { uint64_t u; int64_t s; } pun_r = { .u = rk };
+    __m256i pv = _mm256_set1_epi64x(pun_p.s);
+    __m256i rv = _mm256_set1_epi64x(pun_r.s);
     for (int j = 0; j < N; j += 4) {
         __m256i b = _mm256_loadu_si256((const __m256i*)(bl+j));
         _mm256_storeu_si256((__m256i*)(bl+j), submod64x4(b, rv, pv));
@@ -159,7 +163,8 @@ static inline void _rk_sub(uint64_t bl[N], uint64_t rk, uint64_t p) {
 }
 
 static inline void _cbc_add(uint64_t bl[N], const uint64_t prev[N], uint64_t p) {
-    __m256i pv = _mm256_set1_epi64x((int64_t)p);
+    union { uint64_t u; int64_t s; } pun_p = { .u = p };
+    __m256i pv = _mm256_set1_epi64x(pun_p.s);
     for (int j = 0; j < N; j += 4) {
         __m256i b = _mm256_loadu_si256((const __m256i*)(bl+j));
         __m256i v = _mm256_loadu_si256((const __m256i*)(prev+j));
@@ -171,7 +176,8 @@ static inline void _cbc_add(uint64_t bl[N], const uint64_t prev[N], uint64_t p) 
 static inline int _cbc_unsub(const uint64_t m[N], const uint64_t prev[N],
                                uint8_t* dst, uint64_t p,
                                const uint8_t zo_byte[N]) {
-    __m256i pv = _mm256_set1_epi64x((int64_t)p);
+    union { uint64_t u; int64_t s; } pun_p = { .u = p };
+    __m256i pv = _mm256_set1_epi64x(pun_p.s);
     uint64_t tmp[N];
     for (int j = 0; j < N; j += 4) {
         __m256i a = _mm256_loadu_si256((const __m256i*)(m+j));
