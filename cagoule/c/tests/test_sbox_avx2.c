@@ -1,5 +1,5 @@
 /**
- * test_sbox_avx2.c — Validation de cagoule_sbox_avx2.h — CAGOULE v2.5.0
+ * test_sbox_avx2.c — Validation de cagoule_sbox_avx2.h — CAGOULE v3.1.0
  *
  * Tests :
  *   1. forward4_avx2 : 400 cas aléatoires, bit-à-bit vs scalaire (4 premiers)
@@ -300,12 +300,15 @@ static void test_edge_cases(void) {
 static void test_backend_detection(void) {
     printf("  [7] cagoule_sbox_backend_is_avx2()...\n");
     int avx2 = cagoule_sbox_backend_is_avx2();
+    int forced_scalar = (getenv("CAGOULE_FORCE_SCALAR") != NULL);
 #ifdef __AVX2__
-    ASSERT(avx2 != 0, "backend_is_avx2 devrait retourner != 0 sur CPU AVX2 (reçu %d)", avx2);
-    printf("      Backend S-box AVX2 : ✓ actif (retour=%d)\n", avx2);
+    if (forced_scalar) {
+        ASSERT(avx2 == 0, "backend_is_avx2 should return 0 under CAGOULE_FORCE_SCALAR");
+    } else {
+        ASSERT(avx2 != 0, "backend_is_avx2 should return != 0 on AVX2 CPU");
+    }
 #else
-    ASSERT(avx2 == 0, "backend_is_avx2 devrait retourner 0 (non compilé)");
-    printf("      Backend S-box AVX2 : absent (fallback scalaire)\n");
+    ASSERT(avx2 == 0, "backend_is_avx2 should return 0 (not compiled)");
 #endif
 }
 
@@ -375,7 +378,7 @@ static void bench_65k_blocks(void) {
 /* ── main ─────────────────────────────────────────────────────────── */
 int main(void) {
     printf("══════════════════════════════════════════════════════\n");
-    printf("  test_sbox_avx2 — CAGOULE v3.0.0\n");
+    printf("  test_sbox_avx2 — CAGOULE v3.1.0\n");
     printf("══════════════════════════════════════════════════════\n");
 
 #ifdef __AVX2__
