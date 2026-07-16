@@ -120,6 +120,10 @@ def _ctr_encrypt_c(plaintext: bytes, params: CagouleParams, nonce: bytes) -> Opt
 
     # Buffer pool : réutilisation TLS
     pt_c    = _get_input_buf(pt_len)
+    # CORRECTIF v3.1.0 (Finding 1) : vérification taille buffer avant memmove
+    assert ctypes.sizeof(pt_c) >= pt_len, (
+        f"_get_input_buf sous-alloué : {ctypes.sizeof(pt_c)} < {pt_len}"
+    )
     ctypes.memmove(pt_c, plaintext, pt_len)
     ct_buf  = _get_out_buf(pt_len)
 
@@ -190,6 +194,9 @@ def _ctr_decrypt_c(ciphertext: bytes, params: CagouleParams, nonce: bytes) -> Op
         return b''
 
     ct_c   = _get_input_buf(ct_len)
+    assert ctypes.sizeof(ct_c) >= ct_len, (
+        f"_get_input_buf sous-alloué : {ctypes.sizeof(ct_c)} < {ct_len}"
+    )
     ctypes.memmove(ct_c, ciphertext, ct_len)
     pt_buf = _get_out_buf(ct_len)
     iv_c   = (ctypes.c_uint8 * 8)(*iv)
@@ -476,7 +483,20 @@ def encrypt_bulk_ctr(messages: list, password: bytes,
     own_params = params is None
     results = []
 
-    for msg in messages:
+    # CORRECTIF v3.1.0 (Finding 5) : instancier ChaCha20Poly1305 une seule
+    # fois pour le mode partagé (k_stream identique pour tous les messages).
+    # En mode own_params, chaque message a son propre k_stream → None ici.
+    chacha_shared = ChaCha20Poly1305(params.k_stream) if not own_params else None
+
+    for i, msg in enumerate(messages):
+        # CORRECTIF v3.1.0 (Finding 3) : validation du type de chaque élément
+        # avant de consommer salt/nonce, sinon une erreur partielle laisse des
+        # ciphertexts orphelins non retournés.
+        if not isinstance(msg, (bytes, bytearray)):
+            raise TypeError(
+                f"encrypt_bulk_ctr: l'élément à l'index {i} doit être "
+                f"bytes ou bytearray, reçu {type(msg).__name__}"
+            )
         if own_params:
             # Mode autonome : sel frais → k_master unique par message
             msg_salt = os.urandom(SALT_SIZE)
@@ -488,12 +508,13 @@ def encrypt_bulk_ctr(messages: list, password: bytes,
             msg_params = params
 
         try:
-            # Nonce généré AVANT l'IV — l'IV est lié au nonce (unicité par message),
-            # pas au salt (qui serait identique pour tous les messages en mode partagé).
             nonce  = os.urandom(NONCE_SIZE)
             ct_alg = _ctr_encrypt(bytes(msg), msg_params, nonce)
             aad    = _build_cgl1_v2(msg_salt)
-            chacha = ChaCha20Poly1305(msg_params.k_stream)
+            # CORRECTIF v3.1.0 (Finding 5) : instancier ChaCha20Poly1305 une
+            # seule fois par message en mode own_params, ou idéalement en dehors
+            # de la boucle pour le mode partagé. Voir chacha_shared ci-dessus.
+            chacha = chacha_shared if (chacha_shared is not None) else ChaCha20Poly1305(msg_params.k_stream)
             ct_aead = chacha.encrypt(nonce, ct_alg, aad)
             results.append(MAGIC + VERSION_CTR + msg_salt + nonce + ct_aead)
         finally:
