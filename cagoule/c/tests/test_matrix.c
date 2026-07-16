@@ -190,7 +190,11 @@ static void bench_matmul(void) {
     
     /* Skip timing thresholds under Valgrind (runs ~30x slower) */
     int under_valgrind = (getenv("RUNNING_ON_VALGRIND") != NULL);
-    int under_debug = (getenv("CAGOULE_DEBUG") != NULL);
+    #ifdef DEBUG
+        int under_debug = 1;
+    #else
+        int under_debug = 0;
+    #endif
     if (!under_valgrind && !under_debug) {
         printf("  [v2.5.0 AVX2 target: ~80 ms forward, ~80 ms inverse]\n");
         CHECK(fwd_ms < 500.0, "forward matrix 65k blocs < 500ms");

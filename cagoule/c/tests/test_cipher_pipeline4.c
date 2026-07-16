@@ -202,7 +202,11 @@ static void test_benchmark(void) {
     printf("  encrypt : %.1f MB/s | decrypt : %.1f MB/s | %.0f MB total\n",
            enc_mbs, dec_mbs, mb);
 
-    int under_debug = (getenv("CAGOULE_DEBUG") != NULL);
+    #ifdef DEBUG
+        int under_debug = 1;
+    #else
+        int under_debug = 0;
+    #endif
     if (!under_debug) {
         CHECK(enc_mbs > 3.0, "encrypt > 3 MB/s");
         CHECK(dec_mbs > 3.0, "decrypt > 3 MB/s");

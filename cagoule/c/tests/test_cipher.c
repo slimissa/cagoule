@@ -447,7 +447,11 @@ static void bench_1mb(void) {
     printf("  [Python v1.5 : enc ~1700ms, dec ~13300ms]\n");
 
     int under_valgrind = (getenv("RUNNING_ON_VALGRIND") != NULL);
-    int under_debug = (getenv("CAGOULE_DEBUG") != NULL);
+    #ifdef DEBUG
+        int under_debug = 1;
+    #else
+        int under_debug = 0;
+    #endif
     if (!under_valgrind && !under_debug) {
         CHECK(enc_ms < 200.0, "encrypt 1 MB < 200 ms");
         CHECK(dec_ms < 200.0, "decrypt 1 MB < 200 ms");
