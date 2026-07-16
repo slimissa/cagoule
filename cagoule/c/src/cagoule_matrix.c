@@ -1,5 +1,5 @@
 /**
- * cagoule_matrix.c — Matrice de diffusion Vandermonde CAGOULE v2.5.1
+ * cagoule_matrix.c — Matrice de diffusion Vandermonde CAGOULE v3.1.0
  *
  * Nouveautés v2.2.0 :
  *   - Dispatch runtime AVX2 : détection via __builtin_cpu_supports("avx2")
@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <openssl/crypto.h> 
 
 #include "cagoule_math.h"
 #include "cagoule_matrix.h"
@@ -219,7 +220,10 @@ __attribute__((force_align_arg_pointer)) CagouleMatrix* cagoule_matrix_build(con
 }
 
 void cagoule_matrix_free(CagouleMatrix* m) {
-    free(m);
+    if (m) {
+        OPENSSL_cleanse(m, sizeof(*m));
+        free(m);
+    }
 }
 
 /* ── Produit matrice-vecteur déroulé (signature harmonisée) ───────── */
