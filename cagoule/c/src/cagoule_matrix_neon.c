@@ -24,14 +24,9 @@
 #include <arm_neon.h>
 #include <string.h>
 
-/* ── Macro d'accumulation 2-lane Mersenne ─────────────────────────── */
-#define ACCUM2_MERSENNE(acc, mat, grp, lane_off, col, pv, kv) do {    \
-    uint64_t const *_base = (mat)[grp] + (col)*4 + (lane_off);        \
-    uint64x2_t _row = vld1q_u64(_base);                                \
-    uint64x2_t _vj  = vdupq_n_u64((col_v));                           \
-    (acc) = addmod64x2_neon((acc),                                     \
-        mulmod_mersenne64x2_neon(_row, _vj, pv, kv), pv);             \
-} while(0)
+/* ── Accumulation 2-lane NEON ──────────────────────────────────────
+ * Inline loops below are the canonical implementation — no macro needed.
+ * The compiler unrolls the 8-group loop automatically. */
 
 /* ── Helper interne — une passe sur les 16 colonnes, 2 rows à la fois  */
 static void _matmul_neon_pass(const uint64_t mat[4][CAGOULE_N * 4],
