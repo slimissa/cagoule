@@ -224,6 +224,14 @@ def decrypt_ctr_raw(ciphertext: bytes, password: bytes,
     own_params = params is None
     if own_params:
         params = CagouleParams.derive(password, salt=salt, fast_mode=fast_mode)
+    else:
+        if bytes(params.salt) != bytes(salt):
+            _log.warning(
+                "decrypt_ctr_raw : params.salt (%s...) ne correspond pas au "
+                "salt du header CGL1 (%s...). Le déchiffrement peut produire "
+                "du garbage sans erreur d'authentification.",
+                bytes(params.salt).hex()[:16], salt.hex()[:16]
+            )
     # Si params est fourni (bulk ou bench), on l'utilise tel quel — même
     # convention que decrypt_ctr() v0x02 : le salt du ciphertext doit
     # correspondre au salt utilisé pour dériver params.
