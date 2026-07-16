@@ -1,5 +1,5 @@
 /**
- * test_cipher.c — Tests du pipeline CBC CAGOULE v2.5.1
+ * test_cipher.c — Tests du pipeline CBC CAGOULE v3.1.0
  *
  * Usage :
  *   gcc -O2 -std=c99 -Iinclude src/cagoule_matrix.c src/cagoule_sbox.c \
@@ -447,9 +447,12 @@ static void bench_1mb(void) {
     printf("  [Python v1.5 : enc ~1700ms, dec ~13300ms]\n");
 
     int under_valgrind = (getenv("RUNNING_ON_VALGRIND") != NULL);
-    if (!under_valgrind) {
+    int under_debug = (getenv("CAGOULE_DEBUG") != NULL);
+    if (!under_valgrind && !under_debug) {
         CHECK(enc_ms < 200.0, "encrypt 1 MB < 200 ms");
         CHECK(dec_ms < 200.0, "decrypt 1 MB < 200 ms");
+    } else if (under_debug) {
+        printf("  (seuils de performance ignorés en mode debug)\n");
     }
     CHECK(dec_ms / enc_ms < 2.0, "ratio dec/enc < 2×");
 
@@ -461,7 +464,7 @@ static void bench_1mb(void) {
 /* ── Main ─────────────────────────────────────────────────────────── */
 int main(void) {
     printf("══════════════════════════════════════════\n");
-    printf("  CAGOULE v3.0.0 — test_cipher.c\n");
+    printf("  CAGOULE v3.1.0 — test_cipher.c\n");
     printf("══════════════════════════════════════════\n");
 
     setup();

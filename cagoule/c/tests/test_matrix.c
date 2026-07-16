@@ -190,10 +190,13 @@ static void bench_matmul(void) {
     
     /* Skip timing thresholds under Valgrind (runs ~30x slower) */
     int under_valgrind = (getenv("RUNNING_ON_VALGRIND") != NULL);
-    if (!under_valgrind) {
+    int under_debug = (getenv("CAGOULE_DEBUG") != NULL);
+    if (!under_valgrind && !under_debug) {
         printf("  [v2.5.0 AVX2 target: ~80 ms forward, ~80 ms inverse]\n");
         CHECK(fwd_ms < 500.0, "forward matrix 65k blocs < 500ms");
         CHECK(inv_ms < 500.0, "inverse matrix 65k blocs < 500ms");
+    } else if (under_debug) {
+        printf("  (seuils de performance ignorés en mode debug)\n");
     }
     CHECK(inv_ms / fwd_ms < 1.5, "ratio inv/fwd < 1.5x (Feistel property)");  /* ratio is timing-independent */
 
@@ -222,7 +225,7 @@ static void test_invalid_params(void) {
 /* ── Main ─────────────────────────────────────────────────────────── */
 int main(void) {
     printf("══════════════════════════════════════════\n");
-    printf("  CAGOULE v3.0.0 — test_matrix.c\n");
+    printf("  CAGOULE v3.1.0 — test_matrix.c\n");
     printf("══════════════════════════════════════════\n");
 
     printf("\n[Roundtrip P × P^-1 = I]\n");

@@ -1,5 +1,5 @@
 /**
- * test_cipher_pipeline4.c — Tests parité & benchmarks pipeline4 v2.5.0
+ * test_cipher_pipeline4.c — Tests parité & benchmarks pipeline4 v3.1.0
  *
  * Vérifie :
  *   1. Déterminisme : deux appels identiques → même ciphertext
@@ -202,8 +202,13 @@ static void test_benchmark(void) {
     printf("  encrypt : %.1f MB/s | decrypt : %.1f MB/s | %.0f MB total\n",
            enc_mbs, dec_mbs, mb);
 
-    CHECK(enc_mbs > 3.0, "encrypt > 3 MB/s");
-    CHECK(dec_mbs > 3.0, "decrypt > 3 MB/s");
+    int under_debug = (getenv("CAGOULE_DEBUG") != NULL);
+    if (!under_debug) {
+        CHECK(enc_mbs > 3.0, "encrypt > 3 MB/s");
+        CHECK(dec_mbs > 3.0, "decrypt > 3 MB/s");
+    } else {
+        printf("  (seuils de performance ignorés en mode debug)\n");
+    }
 
     free(plain); free(ct); free(pt);
 }
@@ -335,7 +340,7 @@ static void test_decrypt_residual_regression(void) {
 /* ── main ─────────────────────────────────────────────────────────── */
 int main(void) {
     printf("═══════════════════════════════════════════════════════\n");
-    printf("  test_cipher_pipeline4 — CAGOULE v3.0.0\n");
+    printf("  test_cipher_pipeline4 — CAGOULE v3.1.0\n");
     printf("═══════════════════════════════════════════════════════\n");
 
     setup();
