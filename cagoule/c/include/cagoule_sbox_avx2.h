@@ -1,5 +1,5 @@
 /**
- * cagoule_sbox_avx2.h — S-box Feistel vectorisée AVX2 — CAGOULE v2.5.0
+ * cagoule_sbox_avx2.h — S-box Feistel vectorisée AVX2 — CAGOULE v3.1.0
  *
  * Traite 4 éléments uint64_t simultanément dans des registres __m256i.
  *
@@ -150,7 +150,7 @@ static inline void _sbox_block_forward_hot_avx2(const CagouleSBox64* s,
     const __m256i p_vec   = _mm256_set1_epi64x((int64_t)s->p);
     const __m256i flip    = _mm256_set1_epi64x((int64_t)0x8000000000000000ULL);
     const uint64_t p      = s->p;
-    size_t i = 0;
+    unsigned i = 0;
 
     for (; i + 4 <= n; i += 4) {
         __m256i x4 = _mm256_loadu_si256((const __m256i*)(in + i));
@@ -184,7 +184,7 @@ static inline void _sbox_block_inverse_hot_avx2(const CagouleSBox64* s,
     const __m256i p_vec   = _mm256_set1_epi64x((int64_t)s->p);
     const __m256i flip    = _mm256_set1_epi64x((int64_t)0x8000000000000000ULL);
     const uint64_t p      = s->p;
-    size_t i = 0;
+    unsigned i = 0;
 
     for (; i + 4 <= n; i += 4) {
         __m256i y4 = _mm256_loadu_si256((const __m256i*)(in + i));

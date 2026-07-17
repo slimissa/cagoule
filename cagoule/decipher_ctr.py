@@ -109,7 +109,7 @@ def decrypt_ctr(ciphertext: bytes, password: bytes,
         # 4. Déchiffrement CTR algébrique
         # CORRECTIF v3.0.1 (3e itération) : passer le nonce (lu depuis le header)
         # pour dériver le même IV que lors du chiffrement.
-        # L'IV = HKDF(k_master, b'CAGOULE_CTR_V30' + nonce) — symétrique avec encrypt.
+        # L'IV = HKDF(k_master, b'CAGOULE_CTR_V31' + nonce) — symétrique avec encrypt.
         plaintext = _ctr_decrypt(ct_alg, params, nonce)
         return plaintext
 
