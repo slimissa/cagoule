@@ -30,7 +30,6 @@ CC       = gcc
 # -funroll-loops : déroulage explicite des boucles N=16 (4 iterations de 4)
 CFLAGS   = -O3 -funroll-loops -std=c99 -Wall -Wextra -fPIC -Iinclude
 CFLAGS  += -D_POSIX_C_SOURCE=200809L
-CFLAGS  += -Wno-aggressive-loop-optimizations
 LDFLAGS  = -shared
 LDLIBS   = -lm -lcrypto -largon2
 
@@ -57,6 +56,14 @@ ifeq ($(HAS_OPENSSL),yes)
     LDLIBS  += $(shell pkg-config --libs-only-l openssl)
 else
     $(warning OpenSSL non trouvé via pkg-config, utilisation de -lcrypto direct)
+endif
+
+# Détection Argon2
+HAS_ARGON2 := $(shell pkg-config --exists libargon2 2>/dev/null && echo yes || echo no)
+ifeq ($(HAS_ARGON2),yes)
+    CFLAGS  += $(shell pkg-config --cflags libargon2)
+else
+    $(error libargon2 non trouvé. Installer : sudo apt install libargon2-dev)
 endif
 
 # ── Sources de base ─────────────────────────────────────────────────────
