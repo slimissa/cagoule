@@ -1,6 +1,6 @@
-# Security Policy — CAGOULE v3.0.1
+# Security Policy — CAGOULE v3.1.0
 
-## Security Advisory — v3.0.1 Patch
+## Security Advisory — v3.1.0 Patch
 
 v3.0.1 fixes two vulnerabilities present in v3.0.0 that affect confidentiality:
 
@@ -224,6 +224,35 @@ The S-box uses a 2-round Feistel network with degree-1 round functions. The over
 
 ---
 
+Add this section under **6. Known Limitations**:
+
+### 6.7 AAD does not include the nonce
+
+The AEAD authenticated additional data in CGL1 v0x02 is:
+
+```
+AAD = MAGIC(4) || VERSION(1) || SALT(32)
+```
+
+The ChaCha20-Poly1305 nonce (12 bytes, offset 37-48 in the CGL1 header) is **not**
+included in the AAD. It IS included as the ChaCha20-Poly1305 nonce input itself,
+so modifying the header nonce bits changes the AEAD keystream and causes
+tag verification to fail. This provides incidental authentication of the nonce.
+
+However, this protection relies on the nonce being the AEAD nonce — a property
+that does not hold in the streaming chunk-index scheme (v3.1.0 `cagoule_stream.c`,
+Feature 4) or in future wire formats where the nonce may be carried separately.
+
+**Mitigation**: In v0x02 (ChaCha20-Poly1305), nonce modification is detected
+by AEAD tag failure. In v0x03 (Poly1305-only, experimental), the AAD already
+includes `MAGIC || VERSION || SALT` and the VERSION byte prevents cross-mode
+confusion.
+
+**Plan**: Add nonce to AAD in v3.2.0:
+AAD = MAGIC(4) || VERSION(1) || SALT(32) || NONCE(12)
+This will be a wire-format-breaking change and will ship with a VERSION byte bump.
+
+
 ## 7. Side-Channel Considerations
 
 ### 7.1 Constant-time operations in the C layer
@@ -281,7 +310,7 @@ password  ──►  Argon2id  ──►  k_master (64 bytes)
   (ChaCha20 key)                                           (Z-Domain Shift)
         │
   HKDF(k_master)
-  "CAGOULE_CTR_V30"     ← v3.0.0
+  "CAGOULE_CTR_V31"     ← v3.1.0
         │
   IV_CTR (8 bytes)
 
